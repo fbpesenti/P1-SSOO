@@ -2,7 +2,12 @@
 
 struct crmsfile
 {
-    
+    void* validation_byte;
+    char name[12];
+    int file_size;
+    int virtual_dir;
+    void* VPN;
+    void* offset;
 };
 
 typedef struct crmsfile CrmsFile; 

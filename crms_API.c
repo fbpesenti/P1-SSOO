@@ -32,6 +32,11 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
 }
 
 int cr_write_file(CrmsFile* file_desc, void* buffer, int n_bytes){
+    char* bytes;
+    for (int i = 0; i < n_bytes; i++)
+    {
+        bytes[i] = buffer[i];
+    }
     
 }
 

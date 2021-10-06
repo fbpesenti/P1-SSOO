@@ -1,4 +1,5 @@
 #pragma once
+#include <stdio.h>
 
 struct crmsfile
 {
@@ -6,11 +7,14 @@ struct crmsfile
     char name[12];
     int file_size;
     int virtual_dir;
+    char mode;
     void* VPN;
     void* offset;
 };
 
 typedef struct crmsfile CrmsFile; 
+
+static char* MEM_PATH;
 
 // funciones generales
 void cr_mount(char* memory_path);

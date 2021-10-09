@@ -7,7 +7,6 @@ int main(int argc, char const *argv[])
     {
         const char* path = argv[1];
         cr_mount(path);
-        printf("direccion es: %s \n", MEM_PATH);
         printf("argv: %s \n", argv[1]);
 
     }

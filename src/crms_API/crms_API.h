@@ -1,15 +1,20 @@
 #pragma once
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 
 struct crmsfile
 {
-    void* validation_byte;
-    char name[12];
-    int file_size;
-    int virtual_dir;
-    char mode;
+    uint8_t validation_byte; // indica si 
+    char* name; // nombre
+    unsigned long int file_size; // tamaño del archivo
+    unsigned int virtual_dir; // direccion virtual
+    char mode; //r o w
     void* VPN;
     void* offset;
+    unsigned int read_index; // Posición desde donde leer sus bytes
+    unsigned int process_id; //proceso al que pertenece
+    uint8_t  pag;
 };
 
 typedef struct crmsfile CrmsFile; 

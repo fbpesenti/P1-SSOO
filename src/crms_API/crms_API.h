@@ -14,8 +14,6 @@ struct crmsfile
 
 typedef struct crmsfile CrmsFile; 
 
-static char* MEM_PATH;
-
 // funciones generales
 void cr_mount(char* memory_path);
 

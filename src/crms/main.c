@@ -7,6 +7,7 @@ int main(int argc, char const *argv[])
     {
         char* path = argv[1];
         cr_mount(path);
+        cr_ls_processes();
     }
     return 0;
 }

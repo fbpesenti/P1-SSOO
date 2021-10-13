@@ -36,7 +36,6 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
   cr_file->read_index = 0;
   FILE* MEM = fopen(MEM_PATH, "r+b");
   fseek(MEM, 0, SEEK_SET);
-
   if (mode == 'r')
   {
     uint8_t entry_pcb;

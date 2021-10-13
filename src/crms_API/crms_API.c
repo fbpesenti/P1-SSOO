@@ -12,9 +12,9 @@ void cr_mount(char* memory_path) {
 void cr_ls_processes() {
     FILE* MEM = fopen(MEM_PATH, "r+b");
     fseek(MEM, 0, SEEK_SET);
-    uint8_t entry_pcb;
+    //uint8_t entry_pcb;
     for (uint8_t i=0; i < 16; i+=1){
-        entry_pcb=i*256;
+        //entry_pcb=i*256;
         uint8_t estado[1];
         uint8_t id_proceso[1];
         char nombre[12];
@@ -27,6 +27,12 @@ void cr_ls_processes() {
         //printf("id_proceso: %d\n",id_proceso[0]);
         //printf("Nombre proceso: %s\n",nombre);
         if (estado[0]==1){
+            //if (strcmp(nombre, "")){
+            //    printf("Proceso con id %d y nombre es vacio\n", id_proceso[0]);
+            //}
+            //else {
+            //    printf("Proceso con id %d y nombre %s esta en ejecución\n", id_proceso[0], nombre);
+            //}
             printf("Proceso con id %d y nombre %s esta en ejecución\n", id_proceso[0], nombre);
         }
         fseek(MEM, 242, SEEK_CUR);
@@ -35,16 +41,119 @@ void cr_ls_processes() {
     fclose(MEM);
 }
 int cr_exists(int process_id, char* file_name){
+    FILE* MEM = fopen(MEM_PATH, "r+b");
+    fseek(MEM, 0, SEEK_SET);
+    int retornar = 0;
+    for (uint8_t i=0; i < 16; i+=1){
+        uint8_t estado[1];
+        uint8_t id_proceso[1];
+        char nombre[12];
+        fread(estado,1,1,MEM);
+        fread(id_proceso,1,1,MEM);
+        fread(nombre,1,12,MEM);
+        for (uint8_t i=0; i<10; i+=1){
+            uint8_t validez[1];
+            char nombre_archivo[12];
+            char tamano_archivo[4];
+            char direccion_virtual[4];
+            fread(validez,1,1,MEM);
+            fread(nombre_archivo,1,12,MEM);
+            fread(tamano_archivo,1,4,MEM);
+            fread(direccion_virtual,1,4,MEM);
+            if (strcmp(nombre_archivo,file_name)==0){
+                printf("El archivo %s existe\n", nombre_archivo);
+                retornar+=1;
+            }
+        }
+        fseek(MEM, 32, SEEK_CUR);
+    }
+    if (retornar==0){
+        printf("Función cr_exists retorno 0\n");
+        return 0;
+    }
+    else{
+        printf("Función cr_exists retorno 1\n");
+        return 1;
+    }
 
+    fclose(MEM);
 }
 
 // funciones procesos
 void cr_ls_files(int process_id){
+    FILE* MEM = fopen(MEM_PATH, "r+b");
+    fseek(MEM, 0, SEEK_SET);
+    //uint8_t entry_pcb;
+    for (uint8_t i=0; i < 16; i+=1){
+        //entry_pcb=i*256;
+        uint8_t estado[1];
+        uint8_t id_proceso[1];
+        char nombre[12];
+        //printf("Puntero file: %ld\n",ftell(MEM));
+        fread(estado,1,1,MEM);
+        fread(id_proceso,1,1,MEM);
+        fread(nombre,1,12,MEM);
+        //printf("nombre proceso %s\n", nombre);
+        //printf("Puntero file: %ld\n",ftell(MEM));
+        if (id_proceso[0] == process_id && estado[0]==1){
+            printf("Mostrando los archivos del proceso con id %d y nombre %s\n", id_proceso[0], nombre);
+        }
+        for (uint8_t i=0; i<10; i+=1){
+            uint8_t validez[1];
+            //printf("validez: %hhx\n", validez[0]);
+            char nombre_archivo[12];
+            uint8_t tamano_archivo[4];
+            //char tamano_archivo[4];
+            //char direccion_virtual[4];
+            uint8_t direccion_virtual[4];
+            fread(validez,1,1,MEM);
+            fread(nombre_archivo,1,12,MEM);
+            fread(tamano_archivo,1,4,MEM);
+            fread(direccion_virtual,1,4,MEM);
+            if (nombre_archivo!=NULL && id_proceso[0] == process_id && validez[0]==1){
+                printf("Archivo: %s con tamaño %d y direccion virtual %d\n", nombre_archivo, tamano_archivo[0], direccion_virtual[0]);
+            }
 
+        }
+        //256 - 14 - 210 = 32 para moverse la cantidad de bytes para estar en el siguiente proceso
+        fseek(MEM, 32, SEEK_CUR);
+    }
+
+    fclose(MEM);
 }
 
 void cr_start_process(int process_id, char* process_name){
+    FILE* MEM = fopen(MEM_PATH, "r+b");
+    fseek(MEM, 0, SEEK_SET);
+    //uint8_t entry_pcb;
+    int entro = 0;
+    for (uint8_t i=0; i < 16; i+=1){
+        //entry_pcb=i*256;
+        uint8_t estado[1];
+        uint8_t id_proceso[1];
+        char nombre[12];
+        //printf("Puntero file antes de leer: %ld\n",ftell(MEM));
+        fread(estado,1,1,MEM);
+        fread(id_proceso,1,1,MEM);
+        fread(nombre,1,12,MEM);
+        if (estado[0]==0 && id_proceso[0]==0 && entro==0 && strcmp(nombre,"")==0){
+            fseek(MEM, -14, SEEK_CUR);
+            printf("proceso start dentro: %s\n", process_name);
+            estado[0]=1;
+            id_proceso[0]=process_id;
+            //nombre=process_name;
+            //printf("hay un espacio disponible\n");
+            //printf("Puntero file antes de escribir: %ld\n",ftell(MEM));
+            fwrite(estado,1,1,MEM);
+            fwrite(id_proceso,1,1,MEM);
+            fwrite(process_name,1,12,MEM);
+            entro+=1;
+            //printf("Puntero file despues de escribir: %ld\n",ftell(MEM));
+        }
+        fseek(MEM, 242, SEEK_CUR);
+    }
 
+    fclose(MEM);
 }
 
 void cr_finish_process(int process_id){

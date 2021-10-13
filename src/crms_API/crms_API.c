@@ -1,4 +1,5 @@
 #include "crms_API.h"
+#include <string.h>
 
 char* MEM_PATH;
 
@@ -138,7 +139,6 @@ void cr_start_process(int process_id, char* process_name){
         fread(nombre,1,12,MEM);
         if (estado[0]==0 && id_proceso[0]==0 && entro==0 && strcmp(nombre,"")==0){
             fseek(MEM, -14, SEEK_CUR);
-            printf("proceso start dentro: %s\n", process_name);
             estado[0]=1;
             id_proceso[0]=process_id;
             //nombre=process_name;
@@ -157,7 +157,58 @@ void cr_start_process(int process_id, char* process_name){
 }
 
 void cr_finish_process(int process_id){
-    
+    FILE* MEM = fopen(MEM_PATH, "r+b");
+    fseek(MEM, 0, SEEK_SET);
+    for (uint8_t i=0; i < 16; i+=1){
+        //printf("Puntero file: %ld\n",ftell(MEM));
+        uint8_t estado[1];
+        uint8_t id_proceso[1];
+        char nombre[12];
+        fread(estado,1,1,MEM);
+        fread(id_proceso,1,1,MEM);
+        fread(nombre,1,12,MEM);
+        //printf("nombre %s\n", nombre);
+        int entro = 0;
+        if (id_proceso[0]==process_id && estado[0]==1){
+            printf("Proceso con id %d y nombre %s terminando\n", id_proceso[0], nombre);
+            entro+=1;
+            fseek(MEM, -14, SEEK_CUR);
+            estado[0]=0;
+            id_proceso[0]=0;
+            fwrite(estado,1,1,MEM);
+            fwrite(id_proceso,1,1,MEM);
+            fwrite("",1,12,MEM);
+            for (uint8_t i=0; i<10; i+=1){
+                //printf("Puntero file: %ld\n",ftell(MEM));
+                uint8_t validez[1];
+                char nombre_archivo[12];
+                uint8_t tamano_archivo[4];
+                uint8_t direccion_virtual[4];
+                fread(validez,1,1,MEM);
+                fread(nombre_archivo,1,12,MEM);
+                fread(tamano_archivo,1,4,MEM);
+                fread(direccion_virtual,1,4,MEM);
+                //if (strcmp(nombre_archivo,"")!=0 && id_proceso[0] == process_id && validez[0]==1){
+                if (id_proceso[0] == process_id && validez[0]==1){
+                    printf("Borrando archivo: %s con tamaño %d y direccion virtual %d\n", nombre_archivo, tamano_archivo[0], direccion_virtual[0]);
+                }
+                fseek(MEM,-21,SEEK_CUR);
+                fwrite("",1,1,MEM);
+                fwrite("",1,12,MEM);
+                fwrite("",1,4,MEM);
+                fwrite("",1,4,MEM);
+            }
+            //printf("Puntero file: %ld\n",ftell(MEM));
+        }
+        if (entro==1){
+            fseek(MEM, 32, SEEK_CUR);
+        }
+        else {
+            fseek(MEM,242,SEEK_CUR);
+        }
+    }
+
+    fclose(MEM);
 }
 
 // FUNCIONES ARCHIVOS
@@ -171,7 +222,6 @@ void cr_finish_process(int process_id){
 //   if (mode == 'r')
 //   {
 //     uint8_t entry_pcb;
-
 //     for (uint8_t i = 0; i < 16; i++)
 //     {
 //       entry_pcb = i*256;
@@ -260,23 +310,23 @@ void cr_finish_process(int process_id){
 //   return NULL;
 // }
 
-int cr_write_file(CrmsFile* file_desc, void* buffer, int n_bytes){
+//int cr_write_file(CrmsFile* file_desc, void* buffer, int n_bytes){
     //char* bytes;
     //for (int i = 0; i < n_bytes; i++)
     //{
         // bytes[i] = buffer[i];
     //}
     
-}
+//}
 
-int cr_read(CrmsFile* file_desc, void* buffer, int n_bytes){
+//int cr_read(CrmsFile* file_desc, void* buffer, int n_bytes){
     
-}
+//}
 
-void cr_delete_file(CrmsFile* file_desc){
+//void cr_delete_file(CrmsFile* file_desc){
     
-}
+//}
 
-void cr_close(CrmsFile* file_desc){
+//void cr_close(CrmsFile* file_desc){
     
-}
+//}

@@ -8,12 +8,11 @@ int main(int argc, char const *argv[])
         const char* path = argv[1];
         cr_mount(path);
         printf("argv: %s \n", argv[1]);
+        CrmsFile* crms = cr_open(0, "secret.txt", 'r');
+        
 
     }
 
-
-    printf("direccion es: prueba\n");
-    
     
     return 0;
 }

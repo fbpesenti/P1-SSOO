@@ -8,6 +8,8 @@ int main(int argc, char const *argv[])
         char* path = argv[1];
         printf("Funcion cr_mount\n");
         cr_mount(path);
+        printf("argv: %s \n", argv[1]);
+        CrmsFile* crms = cr_open(0, "secret.txt", 'r');
 
         printf("\nFuncion cr_ls_processes\n");
         cr_ls_processes();

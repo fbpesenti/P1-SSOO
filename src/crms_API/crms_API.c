@@ -103,16 +103,16 @@ void cr_ls_files(int process_id){
             uint8_t validez[1];
             //printf("validez: %hhx\n", validez[0]);
             char nombre_archivo[12];
-            uint8_t tamano_archivo[4];
+            uint32_t tamano_archivo[1];
             //char tamano_archivo[4];
             //char direccion_virtual[4];
-            uint8_t direccion_virtual[4];
+            uint32_t direccion_virtual[1];
             fread(validez,1,1,MEM);
             fread(nombre_archivo,1,12,MEM);
-            fread(tamano_archivo,1,4,MEM);
-            fread(direccion_virtual,1,4,MEM);
+            fread(tamano_archivo,4,1,MEM);
+            fread(direccion_virtual,4,1,MEM);
             if (nombre_archivo!=NULL && id_proceso[0] == process_id && validez[0]==1){
-                printf("Archivo: %s con tamaño %d y direccion virtual %d\n", nombre_archivo, tamano_archivo[0], direccion_virtual[0]);
+                printf("Archivo: %s con tamaño %u y direccion virtual %u\n", nombre_archivo, bswap_32(tamano_archivo[0]), bswap_32(direccion_virtual[0]));
             }
 
         }
@@ -249,24 +249,24 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
               uint32_t virtual_dir[1];
               fread(file_size, 4, 1, MEM);
               fread(virtual_dir, 4, 1, MEM);
-              // printf("tamaño de archivo: %lu\n", bswap_32(file_size[0]) );
+              printf("tamaño de archivo: %u\n", bswap_32(file_size[0]) );
               uint8_t vpn = (uint8_t)(virtual_dir[0]>>23);
               uint32_t offset = bswap_32(virtual_dir[0]) & 0b00000000011111111111111111111111;
-              cr_file->virtual_dir = virtual_dir[0];
+              cr_file->virtual_dir = bswap_32(virtual_dir[0]);
               cr_file->VPN = vpn;
               cr_file->offset = offset;
               cr_file->file_size = bswap_32(file_size[0]);
-              uint32_t dir_tp =  256*i + (21*10);
+              cr_file->dir_TP =  256*i + (21*10);
               // printf("dir_tp: %lu\n", dir_tp);
-              // printf("vpn: %x\n", vpn);
-              // printf("offset: %x\n", offset);
+              printf("vpn: %x\n", vpn);
+              printf("offset: %x\n", offset);
               break;
             } else {
               fseek(MEM,-12,SEEK_CUR);
             }
             
           }
-          fseek(MEM, 20*(j+1), SEEK_CUR); //muevo stream a posicion inicial de siguiente archivo
+          fseek(MEM, 20, SEEK_CUR); //muevo stream a posicion inicial de siguiente archivo
         } if (cr_file->validation_byte != 1)
         {
           printf("no existe archivo: %s en proceso %d\n", file_name, process_id);
@@ -278,74 +278,90 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
       
     }
   }
+
+  if (mode == 'w')
+  {
+    if(cr_exists(process_id, file_name)){
+      free(cr_file);
+      return NULL;
+    } else{
+      for (uint8_t i = 0; i < 16; i++) // itero sobre PCB
+      {
+        uint8_t valypros[2];           // guarda estado y processo
+        fread(valypros, 1, 2, MEM);
+        // printf("%d) Estado proceso: %u\n", i, (unsigned)valypros[0]);
+
+        if (valypros[1] == process_id && valypros[0] == 1){
+          // printf("proceso: %u\n", (unsigned)valypros[1]);
+          fseek(MEM, 12, SEEK_CUR);
+          uint32_t virtual_dir[1];
+          uint32_t virtual_dir_mayor = 0;
+          uint32_t file_size_mayor;
+          uint8_t last_empty_entry;
+          for (uint8_t j = 0; j < 10; j++){ // itero sobre 10 subentradas de archivos.
+            char nombre[12];
+            uint8_t validation_byte[1];
+            fread(validation_byte, 1, 1, MEM);
+            if (validation_byte[0] == 1)
+            {
+              fread(nombre, 1, 12, MEM);
+              // printf("nombre archivo: %s\n", nombre);
+              uint32_t file_size[1];
+              fread(file_size, 4, 1, MEM);
+              fread(virtual_dir, 4, 1, MEM);
+
+              uint8_t vpn_test = (uint8_t)(virtual_dir[0]>>23);
+              if (bswap_32(virtual_dir[0]) > virtual_dir_mayor)
+              {
+                file_size_mayor = bswap_32(file_size[0]);
+                virtual_dir_mayor = bswap_32(virtual_dir[0]);
+              }
+            }else {
+              last_empty_entry = j;
+              fseek(MEM,-12,SEEK_CUR);
+            }
+            fseek(MEM, 20, SEEK_CUR);
+          } 
+          fseek(MEM, (256*i) + 14 + (21*last_empty_entry), SEEK_SET); // mueve stream a la entrada de info del primer archivo vacío
+          uint8_t byte_validez[1];
+          byte_validez[0] = 1;
+          uint32_t dir_vir[1];
+          uint32_t file_size[1];
+          file_size[0] = 0;
+          dir_vir[0] = file_size_mayor + virtual_dir_mayor;
+          if ((uint8_t)(dir_vir[0] >> 23) > (uint8_t)32) //no abre si no existe pagina.
+          {
+            printf("dir_vir a escribir: %u", (uint8_t)(dir_vir[0]) >> 23);
+            free(cr_file);
+            return NULL;
+          }
+          uint8_t vpn = dir_vir[0] >> 23;
+          uint32_t offset = dir_vir[0] & 0b00000000011111111111111111111111;
+          printf("offset a guardar: %x", offset);
+          cr_file->validation_byte = byte_validez[0];
+          cr_file->VPN = vpn;
+          cr_file->virtual_dir = dir_vir[0];
+          cr_file->offset = offset;
+          cr_file->file_size = 0;
+          cr_file->name = file_name;
+          cr_file->dir_TP = 256*i + (21*10);
+          dir_vir[0] = bswap_32(dir_vir[0]);
+          fwrite(byte_validez, 1, 1, MEM);
+          fwrite(file_name, 1, 12, MEM);
+          fwrite(file_size, 4, 1, MEM);
+          fwrite(dir_vir, 4, 1, MEM);
+          break;
+        } else {
+          fseek(MEM, 256-2, SEEK_CUR); //muevo stream a posicion inicial de siguiente entrada PCB
+        }
+        
+      }
+    }
+  }
+  
   fclose(MEM);
   return cr_file;
 
-    
-//   else if (mode == 'r')
-//   {
-//     os_strerror(invalid_read_file);
-//     ret_file->mode = 'r';
-//     return ret_file;
-//   }
-//   else if (mode == 'w' && !os_exists(filename))
-//   {
-//     for (int directory_entry = 0; directory_entry < bloque_directory->entry_quantity; directory_entry++)
-//     {
-//       if(!strcmp(bloque_directory->entries[directory_entry].filename, filename)){
-//         ret_file->filename = filename;
-//         //Si el archivo era el que buscaba, procedo a rellenar sus bloques de datos y retorno
-//         uint64_t posicion_bloque_indice = 1024 + (bloque_directory->entries[directory_entry].relative_index)*2048 + (mbt->entry_container[partition]->location)*2048; // MBT + Particion + relative
-//         // Ahora rellenamos el IndexBlock para obtener punteros
-//         ret_file->index_block = bloque_index;
-//         ret_file->mode = 'w';
-//         // Ahora rellenamos los DataBlocks
-//         datablocks_init(disk, ret_file);
-//         fclose(disk);
-//         return ret_file;
-//       }
-//     }
-//   }
-//   else if (mode == 'w')
-//   { //Acá ya existe
-//   for (int directory_entry = 0; directory_entry < bloque_directory->entry_quantity; directory_entry++)
-//     {
-//       if(!strcmp(bloque_directory->entries[directory_entry].filename, filename)){
-//         ret_file->filename = filename;
-//         //Si el archivo era el que buscaba, procedo a rellenar sus bloques de datos y retorno
-//         uint64_t posicion_bloque_indice = 1024 + (bloque_directory->entries[directory_entry].relative_index)*2048 + (mbt->entry_container[partition]->location)*2048; // MBT + Particion + relative
-//         // Ahora rellenamos el IndexBlock para obtener punteros
-//         ret_file->index_block = bloque_index;
-//         // Ahora rellenamos los DataBlocks
-//         datablocks_init(disk, ret_file);
-//         ret_file->mode = 'w';
-//         fclose(disk);
-//         os_strerror(invalid_write_file);
-//         return ret_file;
-//       }
-//     }
-//   }
-//   else
-//   {
-//     for (int directory_entry = 0; directory_entry < bloque_directory->entry_quantity; directory_entry++)
-//     {
-//       if(!strcmp(bloque_directory->entries[directory_entry].filename, filename)){
-//         ret_file->filename = filename;
-//         //Si el archivo era el que buscaba, procedo a rellenar sus bloques de datos y retorno
-//         uint64_t posicion_bloque_indice = 1024 + (bloque_directory->entries[directory_entry].relative_index)*2048 + (mbt->entry_container[partition]->location)*2048; // MBT + Particion + relative
-//         // Ahora rellenamos el IndexBlock para obtener punteros
-
-//         ret_file->index_block = bloque_index;
-//         // Ahora rellenamos los DataBlocks
-//         datablocks_init(disk, ret_file);
-//         fclose(disk);
-//         os_strerror(invalid_open_mode);
-//         ret_file->mode = 'r';
-//         return ret_file;
-//       }
-//     }
-//    }
-  return NULL;
 }
 
 int cr_write_file(CrmsFile* file_desc, void* buffer, int n_bytes){

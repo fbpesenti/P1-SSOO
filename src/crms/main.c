@@ -9,8 +9,12 @@ int main(int argc, char const *argv[])
         printf("Funcion cr_mount\n");
         cr_mount(path);
         printf("argv: %s \n", argv[1]);
-        CrmsFile* crms = cr_open(0, "secret.txt", 'r');
-
+        CrmsFile* crms = cr_open(0, "secret2.txt", 'r');
+        if (crms)
+        {
+                    printf("\ncrms virdir: %u", crms->virtual_dir);
+        }
+    
         printf("\nFuncion cr_ls_processes\n");
         cr_ls_processes();
         int process_id_files = 0;

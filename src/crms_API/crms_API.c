@@ -250,7 +250,7 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
               fread(file_size, 4, 1, MEM);
               fread(virtual_dir, 4, 1, MEM);
               printf("tamaño de archivo: %u\n", bswap_32(file_size[0]) );
-              uint8_t vpn = (uint8_t)(virtual_dir[0]>>23);
+              uint8_t vpn = (uint8_t)(bswap_32(virtual_dir[0])>>23);
               uint32_t offset = bswap_32(virtual_dir[0]) & 0b00000000011111111111111111111111;
               cr_file->virtual_dir = bswap_32(virtual_dir[0]);
               cr_file->VPN = vpn;
@@ -270,6 +270,9 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
         } if (cr_file->validation_byte != 1)
         {
           printf("no existe archivo: %s en proceso %d\n", file_name, process_id);
+          fclose(MEM);
+          free(cr_file);
+          return NULL;
         }
         break;
       } else {
@@ -282,6 +285,7 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
   if (mode == 'w')
   {
     if(cr_exists(process_id, file_name)){
+      fclose(MEM);
       free(cr_file);
       return NULL;
     } else{
@@ -332,6 +336,7 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
           if ((uint8_t)(dir_vir[0] >> 23) > (uint8_t)32) //no abre si no existe pagina.
           {
             printf("dir_vir a escribir: %u", (uint8_t)(dir_vir[0]) >> 23);
+            fclose(MEM);
             free(cr_file);
             return NULL;
           }

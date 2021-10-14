@@ -250,7 +250,7 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
               fread(file_size, 4, 1, MEM);
               fread(virtual_dir, 4, 1, MEM);
               printf("tamaño de archivo: %u\n", bswap_32(file_size[0]) );
-              uint8_t vpn = (uint8_t)(virtual_dir[0]>>23);
+              uint8_t vpn = (uint8_t)(bswap_32(virtual_dir[0])>>23);
               uint32_t offset = bswap_32(virtual_dir[0]) & 0b00000000011111111111111111111111;
               cr_file->virtual_dir = bswap_32(virtual_dir[0]);
               cr_file->VPN = vpn;
@@ -270,6 +270,9 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
         } if (cr_file->validation_byte != 1)
         {
           printf("no existe archivo: %s en proceso %d\n", file_name, process_id);
+          fclose(MEM);
+          free(cr_file);
+          return NULL;
         }
         break;
       } else {
@@ -282,6 +285,7 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
   if (mode == 'w')
   {
     if(cr_exists(process_id, file_name)){
+      fclose(MEM);
       free(cr_file);
       return NULL;
     } else{
@@ -332,6 +336,7 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
           if ((uint8_t)(dir_vir[0] >> 23) > (uint8_t)32) //no abre si no existe pagina.
           {
             printf("dir_vir a escribir: %u", (uint8_t)(dir_vir[0]) >> 23);
+            fclose(MEM);
             free(cr_file);
             return NULL;
           }
@@ -364,38 +369,41 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
 
 }
 
-int cr_write_file(CrmsFile* file_desc, void* buffer, int n_bytes){
-    // char* bytes;
-    // for (int i = 0; i < n_bytes; i++)
-    // {
-    //     // bytes[i] = buffer[i];
-    // }
-
-}
-
-
 int cr_read(CrmsFile* file_desc, void* buffer, int n_bytes){
+  printf("entre a cr_read\n");
     printf("vpn: %x\n", file_desc->VPN);
+    printf("dir_TP: %x\n", file_desc->dir_TP);
     int read_now = 0;
     FILE* MEM = fopen(MEM_PATH, "r+b");
-    n_bytes += file_desc->index; //n bites desde la ultima pocision
+    uint8_t position = file_desc->dir_TP + file_desc->VPN;
+    printf("dir_TP + VPN: %x\n", position);
     fseek(MEM, 0, SEEK_SET); //nos posicionamos al principio del archivo (PCB)
-    fseek(MEM, 224, SEEK_CUR);//nos movemos 224 bytes para llegar a la tabla PCB
-    // ingresar a la entrada dada por el VPN     
-    //PASAR A DECIMAL?
-    //char position = convert(file_desc->VPN);
-    int position = 3;
-    for (int i = 0; i < position; i++)
-    {
-        fseek(MEM, 1, SEEK_CUR);//me muevo tantas entradas como VPN sea
-    }
+    fseek(MEM, position , SEEK_CUR);//nos movemos para llegar a la entrada correspondiente al archivo en la tabla PCB\
     //ahora deberia estar en la entrada correcta
-    uint8_t validez[1];
-    uint8_t PFN[7];
-    fread(validez, 1, 1, MEM);
-    printf("validez %hhx\n");
-    if (validez[1] = "00000001")//si es valido
-    {
+    uint8_t info_mem[1]; 
+    fread(info_mem, 1, 1, MEM);//guardar el bit deinformacion
+    printf("info pcb: %x\n", info_mem[0]);
+    printf("info pcb: %x\n", bswap_32(info_mem[0]));
+
+    uint8_t validez = info_mem[0] >> 7;
+    //if (validez == 0){}
+    printf("validez: %x\n", bswap_32(validez));
+    
+    uint8_t PFN = info_mem[0] & 0111111 | file_desc->offset;
+    printf("PFN: %x\n", PFN);
+    printf("PFN: %x\n", bswap_32(PFN));
+    //ahora voy al frame
+    fseek(MEM, 0, SEEK_SET); //nos posicionamos al principio del archivo (PCB)
+    fseek(MEM, 4016 , SEEK_CUR);//nos movemos   hasta los frame///
+    fseek(MEM, PFN, SEEK_CUR);//llegamos al frame correspondiente
+
+
+
+
+    //uint32_t offset = dir_vir[0] & 0b00000000011111111111111111111111;
+    //printf("validez %hhx\n");
+    //if (validez[1] = "00000001")//si es valido
+    //{
         //char* PFN[7];
         //PFN[0] = (validez[1]>>1) AND 0x01;
         //PFN[1] = (validez[1]>>2) AND 0x01;
@@ -407,7 +415,8 @@ int cr_read(CrmsFile* file_desc, void* buffer, int n_bytes){
         //int physical_adress = (PFN << 23) | file_desc->offset;
     //aca deberia ir a buscar lo que hay que leer :)
 
-    }
+   // }
+   return 7;
 }
 
 

@@ -44,6 +44,11 @@ int main(int argc, char const *argv[])
         printf("\nFuncion crs open\n");
         //char* process_name = "secret.txt";
         //cr_open(0, process_name,'r');
+        printf("\nFuncion crs open\n");
+        uint8_t my_buffer2[1000];
+        cr_read(crms, my_buffer2, 5);
+       printf("\npriuena\n");
+
     }
     return 0;
 }

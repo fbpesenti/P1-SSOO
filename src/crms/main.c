@@ -41,6 +41,9 @@ int main(int argc, char const *argv[])
 
         printf("\nFuncion cr_ls_processes\n");
         cr_ls_processes();
+        printf("\nFuncion crs open\n");
+        //char* process_name = "secret.txt";
+        //cr_open(0, process_name,'r');
     }
     return 0;
 }

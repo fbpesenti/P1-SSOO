@@ -374,9 +374,42 @@ int cr_write_file(CrmsFile* file_desc, void* buffer, int n_bytes){
 }
 
 
-//int cr_read(CrmsFile* file_desc, void* buffer, int n_bytes){
-    
-//}
+int cr_read(CrmsFile* file_desc, void* buffer, int n_bytes){
+    printf("vpn: %x\n", file_desc->VPN);
+    int read_now = 0;
+    FILE* MEM = fopen(MEM_PATH, "r+b");
+    n_bytes += file_desc->index; //n bites desde la ultima pocision
+    fseek(MEM, 0, SEEK_SET); //nos posicionamos al principio del archivo (PCB)
+    fseek(MEM, 224, SEEK_CUR);//nos movemos 224 bytes para llegar a la tabla PCB
+    // ingresar a la entrada dada por el VPN     
+    //PASAR A DECIMAL?
+    //char position = convert(file_desc->VPN);
+    int position = 3;
+    for (int i = 0; i < position; i++)
+    {
+        fseek(MEM, 1, SEEK_CUR);//me muevo tantas entradas como VPN sea
+    }
+    //ahora deberia estar en la entrada correcta
+    uint8_t validez[1];
+    uint8_t PFN[7];
+    fread(validez, 1, 1, MEM);
+    printf("validez %hhx\n");
+    if (validez[1] = "00000001")//si es valido
+    {
+        //char* PFN[7];
+        //PFN[0] = (validez[1]>>1) AND 0x01;
+        //PFN[1] = (validez[1]>>2) AND 0x01;
+        //PFN[2] = (validez[1]>>3) AND 0x01;
+        //PFN[3] = (validez[1]>>4) AND 0x01;
+        //PFN[4] = (validez[1]>>5) AND 0x01;
+        ///PFN[5] = (validez[1]>>6) AND 0x01;
+        //PFN[6] = (validez[1]>>7) AND 0x01;
+        //int physical_adress = (PFN << 23) | file_desc->offset;
+    //aca deberia ir a buscar lo que hay que leer :)
+
+    }
+}
+
 
 //void cr_delete_file(CrmsFile* file_desc){
     

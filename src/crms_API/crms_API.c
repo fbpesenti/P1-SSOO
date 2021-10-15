@@ -61,7 +61,7 @@ int cr_exists(int process_id, char* file_name){
             fread(nombre_archivo,1,12,MEM);
             fread(tamano_archivo,1,4,MEM);
             fread(direccion_virtual,1,4,MEM);
-            if (strcmp(nombre_archivo,file_name)==0){
+            if (strcmp(nombre_archivo,file_name)==0 && validez[0] == 1){
                 printf("El archivo %s existe\n", nombre_archivo);
                 retornar+=1;
             }
@@ -70,10 +70,12 @@ int cr_exists(int process_id, char* file_name){
     }
     if (retornar==0){
         printf("Función cr_exists retorno 0\n");
+        fclose(MEM);
         return 0;
     }
     else{
         printf("Función cr_exists retorno 1\n");
+        fclose(MEM);
         return 1;
     }
 
@@ -244,7 +246,9 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
             if (strcmp(nombre, file_name) == 0)
             {
               cr_file->validation_byte = validation_byte[0];
-              cr_file->name = nombre;
+              cr_file->name = file_name;
+              printf("nombre: %s\n", nombre);
+              printf("file_name: %s\n", file_name);
               uint32_t file_size[1];
               uint32_t virtual_dir[1];
               fread(file_size, 4, 1, MEM);
@@ -256,7 +260,7 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
               cr_file->VPN = vpn;
               cr_file->offset = offset;
               cr_file->file_size = bswap_32(file_size[0]);
-              cr_file->dir_TP =  256*i + (21*10) + 14;
+              cr_file->dir_TP =  256*i + 14 + (21*10);
               // printf("dir_tp: %lu\n", dir_tp);
               printf("vpn: %x\n", vpn);
               printf("offset: %x\n", offset);
@@ -349,7 +353,8 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
           cr_file->offset = offset;
           cr_file->file_size = 0;
           cr_file->name = file_name;
-          cr_file->dir_TP = 256*i + (21*10) +14;
+
+          cr_file->dir_TP = 256*i + 14 + (21*10);
           dir_vir[0] = bswap_32(dir_vir[0]);
           fwrite(byte_validez, 1, 1, MEM);
           fwrite(file_name, 1, 12, MEM);
@@ -524,10 +529,152 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
 }
 
 
-//void cr_delete_file(CrmsFile* file_desc){
-    
-//}
+void cr_delete_file(CrmsFile* file_desc){
+  FILE* MEM = fopen(MEM_PATH, "r+b");
+  fseek(MEM, 0, SEEK_SET);
+  uint32_t last_vir_dir = file_desc->file_size + file_desc->virtual_dir;
+  uint8_t last_page = (uint8_t)(last_vir_dir >> 23);
 
-//void cr_close(CrmsFile* file_desc){
-    
-//}
+  for (uint8_t i = 0; i <= (last_page - file_desc->VPN); i++)
+  {
+    fseek(MEM, file_desc->dir_TP + (file_desc->VPN + i), SEEK_SET);
+    uint8_t pfn[2];
+    fread(pfn, 1, 1, MEM);
+    pfn[0] = pfn[0] & 0b01111111;
+    fseek(MEM, -1, SEEK_CUR);
+    fwrite(pfn, 1, 1, MEM);
+    fseek(MEM, 4096+(pfn[0]/8), SEEK_SET);
+    uint8_t bitmap_byte[0];
+    fread(bitmap_byte, 1, 1, MEM);
+    fseek(MEM, -1, SEEK_CUR);
+    uint8_t bit = pfn[0] - (pfn[0]/8);
+    switch (bit)
+    {
+    case 0:
+      bitmap_byte[0] = bitmap_byte[0] & 0b01111111;
+      break;
+    case 1:
+      bitmap_byte[0] = bitmap_byte[0] & 0b10111111;
+      break;
+    case 2:
+      bitmap_byte[0] = bitmap_byte[0] & 0b11011111;
+      break;
+    case 3:
+      bitmap_byte[0] = bitmap_byte[0] & 0b11101111;
+      break;
+    case 4:
+      bitmap_byte[0] = bitmap_byte[0] & 0b11110111;
+      break;
+    case 5:
+      bitmap_byte[0] = bitmap_byte[0] & 0b11111011;
+      break;
+    case 6:
+      bitmap_byte[0] = bitmap_byte[0] & 0b11111101;
+      break;
+    case 7:
+      bitmap_byte[0] = bitmap_byte[0] & 0b11111110;
+      break;
+    default:
+      break;
+    }
+    fwrite(bitmap_byte, 1, 1, MEM);
+  }
+  fseek(MEM, 0, SEEK_SET);
+  for (uint8_t i = 0; i < 16; i++) // itero sobre PCB
+    {
+      uint8_t valypros[2];           // guarda estado y processo
+      fread(valypros, 1, 2, MEM);
+      // printf("%d) Estado proceso: %u\n", i, (unsigned)valypros[0]);
+
+      if (valypros[1] == file_desc->process_id && valypros[0] == 1){
+        // printf("proceso: %u\n", (unsigned)valypros[1]);
+        fseek(MEM, 12, SEEK_CUR);
+        for (uint8_t j = 0; j < 10; j++){ // itero sobre 10 subentradas de archivos.
+          char nombre[12];
+          uint8_t validation_byte[2];
+          fread(validation_byte, 1, 1, MEM);
+          if (validation_byte[0] == 1)
+          {
+            fread(nombre, 1, 12, MEM);
+            printf("nombre archivo: %s\n", nombre);
+            if (strcmp(nombre, file_desc->name) == 0)
+            {
+              validation_byte[0] = 0;
+              fseek(MEM,-13,SEEK_CUR);
+              fwrite(validation_byte, 1, 1, MEM);
+              file_desc->validation_byte = validation_byte[0];
+            } else {
+              uint32_t file_size[1];
+              uint32_t virtual_dir[2];
+              fread(file_size, 4, 1, MEM);
+              fread(virtual_dir, 4, 1, MEM);
+              virtual_dir[1] = bswap_32(virtual_dir[0]) + bswap_32(file_size[0]); 
+              uint8_t vpn_test[2];
+              vpn_test[0] = (uint8_t)(bswap_32(virtual_dir[0])>>23);
+              vpn_test[1] = (uint8_t)(virtual_dir[1]>>23);
+              long pos = ftell(MEM);
+              for (uint8_t k = 0; k < 2; k++)
+              {
+                fseek(MEM, (file_desc->dir_TP)+vpn_test[k], SEEK_SET);
+                uint8_t pfn[2];
+                fread(pfn, 1, 1, MEM);
+                pfn[0] = pfn[0] | 0b10000000;
+                fseek(MEM, -1, SEEK_CUR);
+                fwrite(pfn, 1, 1, MEM);
+                pfn[1] = pfn[0] & 0b01111111;
+                uint32_t bitmap_dir = 4096+(pfn[1]/8);
+                fseek(MEM, bitmap_dir, SEEK_SET);
+                uint8_t bitmap_byte[0];
+                fread(bitmap_byte, 1, 1, MEM);
+                fseek(MEM, -1, SEEK_CUR);
+                uint8_t bit = pfn[1] - (pfn[1]/8);
+                switch (bit)
+                {
+                case 0:
+                  bitmap_byte[0] = bitmap_byte[0] | 0b10000000;
+                  break;
+                case 1:
+                  bitmap_byte[0] = bitmap_byte[0] | 0b01000000;
+                  break;
+                case 2:
+                  bitmap_byte[0] = bitmap_byte[0] | 0b00100000;
+                  break;
+                case 3:
+                  bitmap_byte[0] = bitmap_byte[0] | 0b00010000;
+                  break;
+                case 4:
+                  bitmap_byte[0] = bitmap_byte[0] | 0b00001000;
+                  break;
+                case 5:
+                  bitmap_byte[0] = bitmap_byte[0] | 0b00000100;
+                  break;
+                case 6:
+                  bitmap_byte[0] = bitmap_byte[0] | 0b00000010;
+                  break;
+                case 7:
+                  bitmap_byte[0] = bitmap_byte[0] | 0b00000001;
+                  break;
+                default:
+                  break;
+                }
+                // printf("\nidnice: %u\n", k);
+                fwrite(bitmap_byte, 1, 1, MEM);
+              }
+              fseek(MEM, pos, SEEK_SET);
+              fseek(MEM, -8, SEEK_CUR);
+              fseek(MEM,-12,SEEK_CUR);
+            }
+          }
+          fseek(MEM, 20, SEEK_CUR); //muevo stream a posicion inicial de siguiente archivo
+        }
+        break;
+      } else {
+        fseek(MEM, 256-2, SEEK_CUR); //muevo stream a posicion inicial de siguiente entrada PCB
+      }
+    }
+  fclose(MEM);
+}
+
+void cr_close(CrmsFile* file_desc){
+    free(file_desc);
+}

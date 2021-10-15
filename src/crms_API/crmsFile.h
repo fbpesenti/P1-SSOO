@@ -14,10 +14,10 @@ struct crmsfile
     uint32_t offset; // 9 bits no significativos y 23 bits de offset
     char mode; //r o w
     uint32_t index; // Posición dentro del file
-    uint32_t  dir_TP; //en cuantas paginas se encuentra el archivo
 
+    uint32_t  dir_TP; //direccion de donde comienza la tabla de paginas del proceso padre
 };
 typedef struct crmsfile CrmsFile; 
 
 CrmsFile* crmsFile_init();
-void crmsFile_destroy(CrmsFile* crmsfile);
+void crmsFile_print(CrmsFile* crmsfile);

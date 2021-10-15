@@ -12,7 +12,10 @@ int main(int argc, char const *argv[])
         CrmsFile* crms = cr_open(0, "secret2.txt", 'r');
         if (crms)
         {
-                    printf("\ncrms virdir: %u", crms->virtual_dir);
+            printf("\ncrms vpn: %d\n", crms->VPN);
+            // crmsFile_print(crms);
+            cr_delete_file(crms);
+            cr_close(crms);
         }
     
         printf("\nFuncion cr_ls_processes\n");
@@ -59,6 +62,7 @@ int main(int argc, char const *argv[])
 
         
         
+
 
     }
     return 0;

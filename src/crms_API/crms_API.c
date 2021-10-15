@@ -468,7 +468,7 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
     while (bytes_to_read < n_bytes){//mientras los bytes que me quedan sean menor a los que debo leer
       for (int j = 0; j < bytes_to_read; j++)//itero segun los nbit
       {
-        fread(buffer, 1, 1, MEM);
+        fread((buffer+j), 1, 1, MEM);
         read_now ++;
         n_bytes --;
       }
@@ -492,7 +492,7 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
     if (bytes_to_read > n_bytes){
       for (int j = 0; j < n_bytes; j++)//itero segun los nbit
       {
-        fread(buffer, 1, 1, MEM);
+        fread((buffer+j), 1, 1, MEM);
         read_now ++;
       }
       file_desc->index = file_desc->index + n_bytes;

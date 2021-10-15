@@ -7,6 +7,14 @@
 #include<math.h>
 #include "crmsFile.h"
 
+enum cr_error{
+  invalid_id,
+  invalid_ls_processes,
+  invalid_inputs,
+  invalid_action,
+};
+
+void cr_strerror(enum cr_error error);
 // funciones generales
 void cr_mount(char* memory_path);
 

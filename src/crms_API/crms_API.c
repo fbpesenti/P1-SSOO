@@ -3,6 +3,27 @@
 
 char* MEM_PATH;
 
+void cr_strerror(enum cr_error error){
+  switch (error)
+  {
+  case invalid_id:
+    printf("ERROR : Invalid input. Id de proceso inválido\n");
+    break;
+  case invalid_ls_processes:
+    printf("ERROR : No hay procesos activos \n");
+    break;
+  case invalid_inputs:
+    printf("ERROR : Inputs inválidos \n");
+    break;
+  case invalid_action:
+    printf("ERROR : No se pudo realizar acción \n");
+    break;
+  default:
+    break;
+  }
+};
+
+
 // funciones generales
 char* MEM_PATH;
 void cr_mount(char* memory_path) {
@@ -14,6 +35,7 @@ void cr_ls_processes() {
     FILE* MEM = fopen(MEM_PATH, "r+b");
     fseek(MEM, 0, SEEK_SET);
     //uint8_t entry_pcb;
+    int count = 0;
     for (uint8_t i=0; i < 16; i+=1){
         //entry_pcb=i*256;
         uint8_t estado[1];
@@ -35,12 +57,19 @@ void cr_ls_processes() {
             //    printf("Proceso con id %d y nombre %s esta en ejecución\n", id_proceso[0], nombre);
             //}
             printf("Proceso con id %d y nombre %s esta en ejecución\n", id_proceso[0], nombre);
+            count++;
         }
         fseek(MEM, 242, SEEK_CUR);
     }
+    if (count == 0)
+        {
+          cr_strerror(invalid_ls_processes);
+        }
+
 
     fclose(MEM);
 }
+
 int cr_exists(int process_id, char* file_name){
     FILE* MEM = fopen(MEM_PATH, "r+b");
     fseek(MEM, 0, SEEK_SET);
@@ -65,6 +94,7 @@ int cr_exists(int process_id, char* file_name){
                 printf("El archivo %s existe\n", nombre_archivo);
                 retornar+=1;
             }
+      
         }
         fseek(MEM, 32, SEEK_CUR);
     }
@@ -87,6 +117,7 @@ void cr_ls_files(int process_id){
     FILE* MEM = fopen(MEM_PATH, "r+b");
     fseek(MEM, 0, SEEK_SET);
     //uint8_t entry_pcb;
+    int id_encontrado = 0;
     for (uint8_t i=0; i < 16; i+=1){
         //entry_pcb=i*256;
         uint8_t estado[1];
@@ -98,8 +129,11 @@ void cr_ls_files(int process_id){
         fread(nombre,1,12,MEM);
         //printf("nombre proceso %s\n", nombre);
         //printf("Puntero file: %ld\n",ftell(MEM));
+        
+        
         if (id_proceso[0] == process_id && estado[0]==1){
             printf("Mostrando los archivos del proceso con id %d y nombre %s\n", id_proceso[0], nombre);
+            id_encontrado = 1;
         }
         for (uint8_t i=0; i<10; i+=1){
             uint8_t validez[1];
@@ -121,6 +155,12 @@ void cr_ls_files(int process_id){
         //256 - 14 - 210 = 32 para moverse la cantidad de bytes para estar en el siguiente proceso
         fseek(MEM, 32, SEEK_CUR);
     }
+
+    if (id_encontrado == 0)
+    {
+      cr_strerror(invalid_id);
+    }
+    
 
     fclose(MEM);
 }
@@ -154,6 +194,11 @@ void cr_start_process(int process_id, char* process_name){
         }
         fseek(MEM, 242, SEEK_CUR);
     }
+    if (entro == 0)
+    {
+      cr_strerror(invalid_action);
+    }
+    
 
     fclose(MEM);
 }
@@ -161,6 +206,7 @@ void cr_start_process(int process_id, char* process_name){
 void cr_finish_process(int process_id){
     FILE* MEM = fopen(MEM_PATH, "r+b");
     fseek(MEM, 0, SEEK_SET);
+    int id_encontrado = 0;
     for (uint8_t i=0; i < 16; i+=1){
         //printf("Puntero file: %ld\n",ftell(MEM));
         uint8_t estado[1];
@@ -174,6 +220,7 @@ void cr_finish_process(int process_id){
         if (id_proceso[0]==process_id && estado[0]==1){
             printf("Proceso con id %d y nombre %s terminando\n", id_proceso[0], nombre);
             entro+=1;
+            id_encontrado++;
             fseek(MEM, -14, SEEK_CUR);
             estado[0]=0;
             id_proceso[0]=0;
@@ -209,6 +256,12 @@ void cr_finish_process(int process_id){
             fseek(MEM,242,SEEK_CUR);
         }
     }
+    if (id_encontrado == 0)
+    {
+      cr_strerror(invalid_id);
+      cr_strerror(invalid_action);
+    }
+    
 
     fclose(MEM);
 }

@@ -3,6 +3,29 @@
 
 char* MEM_PATH;
 
+void cr_strerror(enum cr_error error){
+  switch (error)
+  {
+  case invalid_id:
+    printf("ERROR : Invalid input. Id de proceso inválido\n");
+    break;
+  case invalid_ls_processes:
+    printf("ERROR : No hay procesos activos \n");
+    break;
+  case invalid_inputs:
+    printf("ERROR : Inputs inválidos \n");
+    break;
+  case invalid_action:
+    printf("ERROR : No se pudo realizar acción \n");
+    break;
+  case invalid_mode:
+    printf("ERROR : Invalid input. modo para abrir archivo inválido (solo 'r' o 'w') \n");
+    break;
+  default:
+    break;
+  }
+};
+
 // funciones generales
 char* MEM_PATH;
 void cr_mount(char* memory_path) {
@@ -13,6 +36,7 @@ void cr_mount(char* memory_path) {
 void cr_ls_processes() {
     FILE* MEM = fopen(MEM_PATH, "r+b");
     fseek(MEM, 0, SEEK_SET);
+    int count = 0;
     //uint8_t entry_pcb;
     for (uint8_t i=0; i < 16; i+=1){
         //entry_pcb=i*256;
@@ -35,12 +59,19 @@ void cr_ls_processes() {
             //    printf("Proceso con id %d y nombre %s esta en ejecución\n", id_proceso[0], nombre);
             //}
             printf("Proceso con id %d y nombre %s esta en ejecución\n", id_proceso[0], nombre);
+            count++;
         }
         fseek(MEM, 242, SEEK_CUR);
     }
 
+    if (count == 0)
+        {
+          cr_strerror(invalid_ls_processes);
+        }
+
     fclose(MEM);
 }
+
 int cr_exists(int process_id, char* file_name){
     FILE* MEM = fopen(MEM_PATH, "r+b");
     fseek(MEM, 0, SEEK_SET);
@@ -87,6 +118,7 @@ void cr_ls_files(int process_id){
     FILE* MEM = fopen(MEM_PATH, "r+b");
     fseek(MEM, 0, SEEK_SET);
     //uint8_t entry_pcb;
+    int id_encontrado = 0;
     for (uint8_t i=0; i < 16; i+=1){
         //entry_pcb=i*256;
         uint8_t estado[1];
@@ -100,6 +132,7 @@ void cr_ls_files(int process_id){
         //printf("Puntero file: %ld\n",ftell(MEM));
         if (id_proceso[0] == process_id && estado[0]==1){
             printf("Mostrando los archivos del proceso con id %d y nombre %s\n", id_proceso[0], nombre);
+            id_encontrado++;
         }
         for (uint8_t i=0; i<10; i+=1){
             uint8_t validez[1];
@@ -120,6 +153,11 @@ void cr_ls_files(int process_id){
         }
         //256 - 14 - 210 = 32 para moverse la cantidad de bytes para estar en el siguiente proceso
         fseek(MEM, 32, SEEK_CUR);
+    }
+
+    if (id_encontrado == 0)
+    {
+      cr_strerror(invalid_id);
     }
 
     fclose(MEM);
@@ -154,6 +192,11 @@ void cr_start_process(int process_id, char* process_name){
         }
         fseek(MEM, 242, SEEK_CUR);
     }
+    if (entro == 0)
+    {
+      cr_strerror(invalid_action);
+    }
+
 
     fclose(MEM);
 }
@@ -161,6 +204,7 @@ void cr_start_process(int process_id, char* process_name){
 void cr_finish_process(int process_id){
     FILE* MEM = fopen(MEM_PATH, "r+b");
     fseek(MEM, 0, SEEK_SET);
+    int id_encontrado = 0;
     for (uint8_t i=0; i < 16; i+=1){
         //printf("Puntero file: %ld\n",ftell(MEM));
         uint8_t estado[1];
@@ -174,6 +218,7 @@ void cr_finish_process(int process_id){
         if (id_proceso[0]==process_id && estado[0]==1){
             printf("Proceso con id %d y nombre %s terminando\n", id_proceso[0], nombre);
             entro+=1;
+            id_encontrado++;
             fseek(MEM, -14, SEEK_CUR);
             estado[0]=0;
             id_proceso[0]=0;
@@ -209,6 +254,11 @@ void cr_finish_process(int process_id){
             fseek(MEM,242,SEEK_CUR);
         }
     }
+    if (id_encontrado == 0)
+    {
+      cr_strerror(invalid_id);
+      cr_strerror(invalid_action);
+    }
 
     fclose(MEM);
 }
@@ -222,9 +272,11 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
   cr_file->mode = mode; // guardo modo
   FILE* MEM = fopen(MEM_PATH, "r+b"); // abro memoria
   fseek(MEM, 0, SEEK_SET); //apunto al inicio de stream
+  int id_encontrado = 0;
+  int modo_correcto = 0;
   if (mode == 'r') // si es modo lectura
   {
-
+    modo_correcto++;
 
     for (uint8_t i = 0; i < 16; i++) // itero sobre PCB
     {
@@ -234,6 +286,7 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
 
       if (valypros[1] == process_id && valypros[0] == 1){
         // printf("proceso: %u\n", (unsigned)valypros[1]);
+        id_encontrado++;
         fseek(MEM, 12, SEEK_CUR);
         for (uint8_t j = 0; j < 10; j++){ // itero sobre 10 subentradas de archivos.
           char nombre[12];
@@ -274,6 +327,7 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
         } if (cr_file->validation_byte != 1)
         {
           printf("no existe archivo: %s en proceso %d\n", file_name, process_id);
+          cr_strerror(invalid_action);
           fclose(MEM);
           free(cr_file);
           return NULL;
@@ -284,10 +338,16 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
       }
       
     }
+    if (id_encontrado == 0)
+    {
+      cr_strerror(invalid_id);
+      cr_strerror(invalid_action);
+    }
   }
 
   if (mode == 'w')
   {
+    modo_correcto++;
     if(cr_exists(process_id, file_name)){
       fclose(MEM);
       free(cr_file);
@@ -301,6 +361,7 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
 
         if (valypros[1] == process_id && valypros[0] == 1){
           // printf("proceso: %u\n", (unsigned)valypros[1]);
+          id_encontrado++;
           fseek(MEM, 12, SEEK_CUR);
           uint32_t virtual_dir[1];
           uint32_t virtual_dir_mayor = 0;
@@ -367,7 +428,18 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
         
       }
     }
+    if (id_encontrado == 0)
+    {
+      cr_strerror(invalid_id);
+      cr_strerror(invalid_action);
+    }
   }
+  if (modo_correcto == 0)
+    {
+      cr_strerror(invalid_mode);
+      cr_strerror(invalid_action);
+    }
+
   fclose(MEM);
   return cr_file;
 

@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include "../crms_API/crms_API.h"
 
+extern enum cr_error;
+
 int main(int argc, char const *argv[])
 {
     if (argc >= 2)

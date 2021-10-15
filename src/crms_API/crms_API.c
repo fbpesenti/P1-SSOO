@@ -246,7 +246,9 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
             if (strcmp(nombre, file_name) == 0)
             {
               cr_file->validation_byte = validation_byte[0];
-              cr_file->name = nombre;
+              cr_file->name = file_name;
+              printf("nombre: %s\n", nombre);
+              printf("file_name: %s\n", file_name);
               uint32_t file_size[1];
               uint32_t virtual_dir[1];
               fread(file_size, 4, 1, MEM);

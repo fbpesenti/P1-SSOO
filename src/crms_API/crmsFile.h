@@ -19,4 +19,4 @@ struct crmsfile
 typedef struct crmsfile CrmsFile; 
 
 CrmsFile* crmsFile_init();
-void crmsFile_destroy(CrmsFile* crmsfile);
+void crmsFile_print(CrmsFile* crmsfile);

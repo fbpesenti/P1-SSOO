@@ -369,33 +369,111 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
 
 }
 
-int cr_read(CrmsFile* file_desc, void* buffer, int n_bytes){
-  printf("entre a cr_read\n");
-    printf("vpn: %x\n", file_desc->VPN);
-    printf("dir_TP: %x\n", file_desc->dir_TP);
-    int read_now = 0;
-    FILE* MEM = fopen(MEM_PATH, "r+b");
-    uint8_t position = file_desc->dir_TP + file_desc->VPN;
-    printf("dir_TP + VPN: %x\n", position);
-    fseek(MEM, 0, SEEK_SET); //nos posicionamos al principio del archivo (PCB)
-    fseek(MEM, position , SEEK_CUR);//nos movemos para llegar a la entrada correspondiente al archivo en la tabla PCB\
-    //ahora deberia estar en la entrada correcta
-    uint8_t info_mem[1]; 
-    fread(info_mem, 1, 1, MEM);//guardar el bit deinformacion
-    printf("info pcb: %x\n", info_mem[0]);
-    printf("info pcb: %x\n", bswap_32(info_mem[0]));
 
-    uint8_t validez = info_mem[0] >> 7;
-    //if (validez == 0){}
-    printf("validez: %x\n", bswap_32(validez));
-    
-    uint8_t PFN = info_mem[0] & 0111111 | file_desc->offset;
-    printf("PFN: %x\n", PFN);
-    printf("PFN: %x\n", bswap_32(PFN));
-    //ahora voy al frame
-    fseek(MEM, 0, SEEK_SET); //nos posicionamos al principio del archivo (PCB)
-    fseek(MEM, 4016 , SEEK_CUR);//nos movemos   hasta los frame///
-    fseek(MEM, PFN, SEEK_CUR);//llegamos al frame correspondiente
+uint8_t next_frame(CrmsFile* file_desc, uint8_t vpn, FILE* MEM){
+  uint8_t new_vpn = vpn + 1;
+  uint8_t position = file_desc->dir_TP + file_desc->VPN;
+  printf("dir_TP + VPN: %x\n", bswap_32(position));
+  fseek(MEM, 0, SEEK_SET); 
+  fseek(MEM, position , SEEK_CUR);
+  uint8_t info_mem[1]; 
+  fread(info_mem, 1, 1, MEM);
+  printf("info pcb: %x\n",info_mem[0]);
+  printf("info pcb con swap: %x\n", bswap_32(info_mem[0]));
+  printf("Sacamos el bit de validez....\n");
+  uint8_t validez = info_mem[0] >> 7;
+  printf("bit validez: %x\n", bswap_32(validez));
+  printf("Obtenemos los 7 bit y agragamos offset...\n");
+  uint8_t PFN = info_mem[0] & 0111111 | file_desc->offset;
+  printf("New PFN: %x\n", PFN);
+  return PFN;
+}
+
+int cr_read(CrmsFile* file_desc, void* buffer, int n_bytes){
+  printf("\nentre a cr_read\n");
+  printf("vpn: %x\n", file_desc->VPN);
+  printf("dir_TP: %x\n", bswap_32(file_desc->dir_TP));
+  int read_now = 0;
+  FILE* MEM = fopen(MEM_PATH, "r+b");
+  uint8_t position = file_desc->dir_TP + file_desc->VPN;
+  printf("dir_TP + VPN: %x\n", bswap_32(position));
+  printf("Nos pocisionmos al principio del archivo .....\n");
+  fseek(MEM, 0, SEEK_SET); //nos posicionamos al principio del archivo (PCB)
+  printf("Nos movemos a la entreda correspondiente de tabla PCB.....\n");
+  fseek(MEM, position , SEEK_CUR);//nos movemos para llegar a la entrada correspondiente al archivo en la tabla PCB
+
+  //ahora deberia estar en la entrada correcta
+  uint8_t info_mem[1]; 
+  fread(info_mem, 1, 1, MEM);//guardar el byte de informacion
+  printf("\ninfo pcb: %x\n",info_mem[0]);
+  printf("info pcb con swap: %x\n", bswap_32(info_mem[0]));
+  printf("\nSacamos el bit de validez....\n");
+  uint8_t validez = info_mem[0] >> 7;
+  //if (validez == 0){}
+  printf("bit validez: %x\n", bswap_32(validez));
+  printf("\nObtenemos los 7 bit y agragamos offset...\n");
+
+  uint8_t PFN = info_mem[0] & 0111111 | file_desc->offset;
+  printf("PFN: %x\n", PFN);
+  printf("PFN con bswap: %x\n", bswap_32(PFN));
+  printf("\nAhora vamos a al FRAME..\n");
+
+  fseek(MEM, 0, SEEK_SET); //nos posicionamos al principio del archivo (PCB)
+  fseek(MEM, 4016 , SEEK_CUR);//nos movemos   hasta los frame///
+  fseek(MEM, PFN, SEEK_CUR);//llegamos al frame correspondiente
+  fseek(MEM, file_desc->index, SEEK_CUR);//nos movemos segun el index
+
+  uint8_t bytes_to_read = 8000000 - file_desc->offset;
+  uint8_t buffer1[5];
+  if (bytes_to_read > n_bytes){
+    for (int j = 0; j < n_bytes; j++)//itero segun los nbit
+    {
+      //fread(buffer1[j], 1, 1, MEM);
+      read_now ++;
+      bytes_to_read --;
+    }
+    file_desc->index = file_desc->index + n_bytes;
+    return read_now;
+  }
+  //CASO 2: se me acaba el frame
+  else{
+    printf("se me va a acabar el frame\n");
+    while (bytes_to_read < n_bytes){//mientras los bytes que me quedan sean menor a los que debo leer
+      for (int j = 0; j < bytes_to_read; j++)//itero segun los nbit
+      {
+        //fread(buffer1[j], 1, 1, MEM);
+        read_now ++;
+        n_bytes --;
+      }
+      file_desc->index = 0; //reinicio el index porque leere desde cero un frame
+      //file_desc->index = file_desc->index + read_now;//index repocisionado
+      uint8_t new_PFN = next_frame(file_desc, file_desc->VPN, MEM);
+      printf("\nAhora vamos a al FRAME..\n");
+      fseek(MEM, 0, SEEK_SET); //nos posicionamos al principio del archivo (PCB)
+      fseek(MEM, 4016 , SEEK_CUR); //nos movemos   hasta los frame///
+      fseek(MEM, new_PFN, SEEK_CUR); //llegamos al frame correspondiente
+      fseek(MEM, file_desc->index, SEEK_CUR); //nos movemos segun el index
+      bytes_to_read = 8000000 - file_desc->offset;
+
+    }
+    if (bytes_to_read > n_bytes){
+      for (int j = 0; j < n_bytes; j++)//itero segun los nbit
+      {
+        //fread(buffer1[j], 1, 1, MEM);
+        read_now ++;
+      }
+      file_desc->index = file_desc->index + n_bytes;
+      return read_now;
+    }
+  }
+
+  printf("read %i\n", read_now);
+
+
+  
+
+
+
 
 
 

@@ -45,19 +45,26 @@ int main(int argc, char const *argv[])
         printf("\nFuncion cr_ls_processes\n");
         cr_ls_processes();
         printf("\nFuncion crs open\n");
+
+        int process_id_cats = 200;
+
+        printf("\nFuncion cr_ls_files\n");
+        cr_ls_files(process_id_cats);
+
         //char* process_name = "secret.txt";
         //cr_open(0, process_name,'r');
         printf("\nFuncion crs open\n");
-        uint8_t* buffer[10];
-        CrmsFile* crms2 = cr_open(0, "message.txt", 'r');
+        CrmsFile* crms2 = cr_open(process_id_cats, "woaeo.mp4", 'r');
         if (crms2){
-            FILE* archivo = fopen("message.txt", "w+b");
-            int num = cr_read(crms2, buffer, 10);
+            uint8_t* buffer = calloc(crms2->file_size, 1);
+            FILE* archivo = fopen("woaeo.mp4", "w+b");
+            int num = cr_read(crms2, buffer, crms2->file_size);
             printf("error?\n");
             printf("se leyeron %i bytes\n", num);
-            fwrite(buffer, 1, 10, archivo);
+            fwrite(buffer, 1, crms2->file_size, archivo);
             fclose(archivo);
-            //cr_close(crms2);
+            cr_close(crms2);
+            free(buffer);
         }
 
         

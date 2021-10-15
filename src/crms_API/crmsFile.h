@@ -15,6 +15,7 @@ struct crmsfile
     char mode; //r o w
     uint32_t index; // Posición dentro del file
     uint32_t  dir_TP; //en cuantas paginas se encuentra el archivo
+
 };
 typedef struct crmsfile CrmsFile; 
 

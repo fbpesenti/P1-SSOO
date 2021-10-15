@@ -9,7 +9,7 @@ int main(int argc, char const *argv[])
         printf("Funcion cr_mount\n");
         cr_mount(path);
         printf("argv: %s \n", argv[1]);
-        CrmsFile* crms = cr_open(0, "secret2.txt", 'r');
+        CrmsFile* crms = cr_open(0, "secret2.txt", 'w');
         if (crms)
         {
                     printf("\ncrms virdir: %u", crms->virtual_dir);
@@ -43,8 +43,10 @@ int main(int argc, char const *argv[])
         cr_ls_processes();
 
         printf("\nFuncion crs write\n");
-        // void* buffer[5];
-        // int num = cr_write(crms, buffer, 90000);
+        uint8_t* buffer = calloc(16,1);
+        int num = cr_write_file(crms, buffer, 10);
+        printf("SE escribieron %i\n", num);
+        free(buffer);
     }
     return 0;
 }

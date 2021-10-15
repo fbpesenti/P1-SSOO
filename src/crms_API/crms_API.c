@@ -224,8 +224,6 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
   fseek(MEM, 0, SEEK_SET); //apunto al inicio de stream
   if (mode == 'r') // si es modo lectura
   {
-
-
     for (uint8_t i = 0; i < 16; i++) // itero sobre PCB
     {
       uint8_t valypros[2];           // guarda estado y processo
@@ -258,7 +256,7 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
               cr_file->VPN = vpn;
               cr_file->offset = offset;
               cr_file->file_size = bswap_32(file_size[0]);
-              cr_file->dir_TP =  256*i + (21*10);
+              cr_file->dir_TP =  256*i + 14 + (21*10);
               // printf("dir_tp: %lu\n", dir_tp);
               printf("vpn: %x\n", vpn);
               printf("offset: %x\n", offset);
@@ -346,7 +344,7 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
           cr_file->offset = offset;
           cr_file->file_size = 0;
           cr_file->name = file_name;
-          cr_file->dir_TP = 256*i + (21*10);
+          cr_file->dir_TP =  256*i + 14 + (21*10);
           dir_vir[0] = bswap_32(dir_vir[0]);
           fwrite(byte_validez, 1, 1, MEM);
           fwrite(file_name, 1, 12, MEM);
@@ -366,45 +364,66 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
 }
 
 int cr_write_file(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
-    printf("Entrando a write_file");
+    printf("Entrando a write_file\n");
     if (file_desc->mode !='w')
     {
-      printf("El archivo solo se puede leer");
+      printf("El archivo no se puede escribir\n");
       return 0;
     }
     if(cr_exists(file_desc->process_id, file_desc->name)==0){
-      printf("El archivo no existe");
+      printf("El archivo ya no existe\n");
       return 0;
     }
-    uint8_t bytes_a_escribir[n_bytes];
-    FILE* MEM = fopen(MEM_PATH, "r+b"); // Abrir la memoria
-    uint32_t archivo = file_desc->offset + file_desc->VPN;
-    fseek(MEM, 0, SEEK_SET); // posicionarse al inicio
-    fseek(MEM, buffer, SEEK_SET); //LLegar al lugar del buffer
-    fread(bytes_a_escribir, 1, n_bytes, MEM);//leer los bytes a escribir
-
-    // Quiero entrar al bitmap y buscar el primero que este libre
-    fseek(MEM, 4096, SEEK_SET); //bitframes
-    for (int i = 0; i < 16; i++)
-    {
-      /* code */
-    }
-    
 
     uint8_t byte_write = 0;
-    
-    for (int i = 0; i < n_bytes; i++)
-    {
-        if (byte_write<file_desc->offset){
-        /* code */
-        printf("Agregando byte\n");
-        fwrite(buffer, 1, 1, MEM);
-        byte_write++;
-        }
 
+    FILE* MEM = fopen(MEM_PATH, "w+b"); // Abrir la memoria
+    //uint32_t archivo = (file_desc->VPN + file_desc->offset);
+    uint8_t VPN_actual = (file_desc->virtual_dir + file_desc->index) >> 23;
+    uint32_t offset_actual = (file_desc->virtual_dir + file_desc->index) & 0b00000000011111111111111111111111;
+    uint32_t position = file_desc->dir_TP + VPN_actual;
+
+    fseek(MEM, 0, SEEK_SET); // posicionarse al inicio
+    fseek(MEM, position, SEEK_SET); //LLegar al lugar del archivo
+
+      //ahora deberia estar en la entrada correcta
+    uint8_t info_mem[1]; 
+    fread(info_mem, 1, 1, MEM);//guardar el byte de informacion
+    //printf("\ninfo pcb: %x\n",info_mem[0]);
+    //printf("\nSacamos el bit de validez....\n");
+    uint8_t validez = info_mem[0] >> 7;
+    if (validez == 0){
+      fclose(MEM);
+      return 0;
     }
+    else{
 
-    return byte_write;
+      uint32_t PFN = ((info_mem[0] & 0b01111111)<<23) | offset_actual;
+      // printf("pfn: %x\n", info_mem[0] & 0b01111111);
+      // printf("dir_real: %u\n", PFN);
+      // printf("offset actual: %u", offset_actual);
+      // printf("\nAhora vamos al FRAME..\n");
+      fseek(MEM, 0, SEEK_SET); //nos posicionamos al principio del archivo (PCB)
+      fseek(MEM, 4112, SEEK_CUR);//nos movemos   hasta los frame///
+      fseek(MEM, PFN, SEEK_CUR);//llegamos al frame correspondiente
+
+      uint32_t espacio_bytes = 8388608 - offset_actual;
+      if (espacio_bytes > n_bytes)
+      {
+        for (int i = 0; i < n_bytes; i++)
+        {
+          // If hay espacio se escriben los bytes
+            /* code */
+            printf("Agregando byte\n");
+            fwrite(buffer+i, 1, 1, MEM);
+            byte_write++;
+        }
+        fclose(MEM);  
+        return byte_write;
+      }
+  }
+
+  return byte_write;
     
   
     /* Se debe escribir en el primer espacio libre de la memoria

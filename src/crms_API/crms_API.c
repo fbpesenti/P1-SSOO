@@ -395,6 +395,7 @@ uint32_t next_frame(CrmsFile* file_desc, uint8_t vpn, FILE* MEM){
     printf("bit validez: %x\n", validez);
     printf("Obtenemos los 7 bit y agragamos offset...\n");
     uint32_t PFN = ((info_mem[0] & 0b01111111)<<23) | offset_actual;
+    printf("pfn: %x\n", info_mem[0] & 0b01111111);
     printf("New PFN: %x\n", PFN);
     return PFN;
   }
@@ -467,15 +468,20 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
   else{//CASO 2: se me acaba el frame
     //printf("se me va a acabar el frame\n");
     while (bytes_to_read < n_bytes){//mientras los bytes que me quedan sean menor a los que debo leer
+     
       for (int j = 0; j < bytes_to_read; j++)//itero segun los nbit
       {
         fread((buffer+j), 1, 1, MEM);
         read_now ++;
-        n_bytes --;
+        n_bytes  = n_bytes -1;
+        
       }
-      file_desc->index = file_desc->index + read_now; //reinicio el index porque leere desde cero un frame
+      
+      uint32_t new = file_desc->index + read_now;
+      file_desc->index = new; 
       //file_desc->index = file_desc->index + read_now;//index repocisionado
       uint32_t new_PFN = next_frame(file_desc, file_desc->VPN, MEM);
+
       if (new_PFN == 1073741825){
         fclose(MEM);
         return n_bytes;
@@ -486,15 +492,18 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
       fseek(MEM, 4112, SEEK_CUR); //nos movemos   hasta los frame///
       fseek(MEM, new_PFN, SEEK_CUR); //llegamos al frame correspondiente
       //fseek(MEM, file_desc->index, SEEK_CUR); //nos movemos segun el index
+      //printf("offset actual2: %u\n", offset_actual);
       uint32_t offset_actual = (file_desc->virtual_dir + file_desc->index) & 0b00000000011111111111111111111111;
+      //printf("offset actual3: %u\n", offset_actual);
       bytes_to_read = 8388608 - offset_actual;
+      
       }
     }
-
+    int index_read_now = read_now;
     if (bytes_to_read > n_bytes){
       for (int j = 0; j < n_bytes; j++)//itero segun los nbit
       {
-        fread((buffer+j), 1, 1, MEM);
+        fread((buffer+j+index_read_now), 1, 1, MEM);
         read_now ++;
       }
       file_desc->index = file_desc->index + n_bytes;
@@ -502,33 +511,6 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
       return read_now;
     }
   }
-  
-
-
-  
-
-
-
-
-
-
-
-    //uint32_t offset = dir_vir[0] & 0b00000000011111111111111111111111;
-    //printf("validez %hhx\n");
-    //if (validez[1] = "00000001")//si es valido
-    //{
-        //char* PFN[7];
-        //PFN[0] = (validez[1]>>1) AND 0x01;
-        //PFN[1] = (validez[1]>>2) AND 0x01;
-        //PFN[2] = (validez[1]>>3) AND 0x01;
-        //PFN[3] = (validez[1]>>4) AND 0x01;
-        //PFN[4] = (validez[1]>>5) AND 0x01;
-        ///PFN[5] = (validez[1]>>6) AND 0x01;
-        //PFN[6] = (validez[1]>>7) AND 0x01;
-        //int physical_adress = (PFN << 23) | file_desc->offset;
-    //aca deberia ir a buscar lo que hay que leer :)
-
-   // }
    return 7;
 }
 }

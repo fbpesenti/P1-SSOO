@@ -55,10 +55,10 @@ int main(int argc, char const *argv[])
         //cr_open(0, process_name,'r');
         printf("\nFuncion crs open\n");
 
-        CrmsFile* crms2 = cr_open(process_id_cats, "woaeo.mp4", 'r');
+        CrmsFile* crms2 = cr_open(9, "theme.wav", 'r');
         if (crms2){
             uint8_t* buffer = calloc(crms2->file_size, 1);
-            FILE* archivo = fopen("woaeo.mp4", "w+b");
+            FILE* archivo = fopen("theme.wav", "w+b");
             int num = cr_read(crms2, buffer, crms2->file_size);
             printf("error?\n");
             printf("se leyeron %i bytes\n", num);
@@ -66,7 +66,6 @@ int main(int argc, char const *argv[])
             fclose(archivo);
             cr_close(crms2);
             free(buffer);
-
         }
     }
     return 0;

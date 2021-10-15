@@ -373,7 +373,6 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
 
 }
 
-
 uint32_t next_frame(CrmsFile* file_desc, uint8_t vpn, FILE* MEM){
 
   uint8_t VPN_actual = (file_desc->virtual_dir + file_desc->index) >> 23;  
@@ -534,7 +533,6 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
 }
 }
 
-
 void cr_delete_file(CrmsFile* file_desc){
   FILE* MEM = fopen(MEM_PATH, "r+b");
   fseek(MEM, 0, SEEK_SET);
@@ -602,7 +600,7 @@ void cr_delete_file(CrmsFile* file_desc){
           if (validation_byte[0] == 1)
           {
             fread(nombre, 1, 12, MEM);
-            printf("nombre archivo: %s\n", nombre);
+           // printf("nombre archivo: %s\n", nombre);
             if (strcmp(nombre, file_desc->name) == 0)
             {
               validation_byte[0] = 0;

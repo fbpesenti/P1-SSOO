@@ -54,6 +54,7 @@ int main(int argc, char const *argv[])
         //char* process_name = "secret.txt";
         //cr_open(0, process_name,'r');
         printf("\nFuncion crs open\n");
+
         CrmsFile* crms2 = cr_open(process_id_cats, "woaeo.mp4", 'r');
         if (crms2){
             uint8_t* buffer = calloc(crms2->file_size, 1);
@@ -65,6 +66,7 @@ int main(int argc, char const *argv[])
             fclose(archivo);
             cr_close(crms2);
             free(buffer);
+
         }
     }
     return 0;

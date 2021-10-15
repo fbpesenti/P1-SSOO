@@ -1,4 +1,6 @@
 #include "crms_API.h"
+#include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 
 char* MEM_PATH;
@@ -361,15 +363,57 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
   
   fclose(MEM);
   return cr_file;
-
 }
 
-int cr_write_file(CrmsFile* file_desc, void* buffer, int n_bytes){
-    // char* bytes;
-    // for (int i = 0; i < n_bytes; i++)
-    // {
-    //     // bytes[i] = buffer[i];
-    // }
+int cr_write_file(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
+    printf("Entrando a write_file");
+    if (file_desc->mode !='w')
+    {
+      printf("El archivo solo se puede leer");
+      return 0;
+    }
+    if(cr_exists(file_desc->process_id, file_desc->name)==0){
+      printf("El archivo no existe");
+      return 0;
+    }
+    uint8_t bytes_a_escribir[n_bytes];
+    FILE* MEM = fopen(MEM_PATH, "r+b"); // Abrir la memoria
+    uint32_t archivo = file_desc->offset + file_desc->VPN;
+    fseek(MEM, 0, SEEK_SET); // posicionarse al inicio
+    fseek(MEM, buffer, SEEK_SET); //LLegar al lugar del buffer
+    fread(bytes_a_escribir, 1, n_bytes, MEM);//leer los bytes a escribir
+
+    // Quiero entrar al bitmap y buscar el primero que este libre
+    fseek(MEM, 4096, SEEK_SET); //bitframes
+    for (int i = 0; i < 16; i++)
+    {
+      /* code */
+    }
+    
+
+    uint8_t byte_write = 0;
+    
+    for (int i = 0; i < n_bytes; i++)
+    {
+        if (byte_write<file_desc->offset){
+        /* code */
+        printf("Agregando byte\n");
+        fwrite(buffer, 1, 1, MEM);
+        byte_write++;
+        }
+
+    }
+
+    return byte_write;
+    
+  
+    /* Se debe escribir en el primer espacio libre de la memoria
+    ## Ver donde escribirlo -> memoria virtual ---> Por lo que no siempre empieza del inicio de pagina 
+    ----Se deben tomar en cuenta los siguientes casos bordes
+    --No quedan frames disponibles para continuar
+    -- Se termina el espacio contiguo en memoria virtual
+    -- Se escribieron todos los bytes (Retornar los bytes escritos)*/ 
+
 
 }
 

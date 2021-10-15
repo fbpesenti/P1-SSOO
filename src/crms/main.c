@@ -41,6 +41,10 @@ int main(int argc, char const *argv[])
 
         printf("\nFuncion cr_ls_processes\n");
         cr_ls_processes();
+
+        printf("\nFuncion crs write\n");
+        // void* buffer[5];
+        // int num = cr_write(crms, buffer, 90000);
     }
     return 0;
 }

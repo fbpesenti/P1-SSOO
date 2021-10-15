@@ -66,11 +66,6 @@ int main(int argc, char const *argv[])
             cr_close(crms2);
             free(buffer);
         }
-
-        
-        
-
-
     }
     return 0;
 }

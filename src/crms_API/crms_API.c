@@ -318,7 +318,7 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
               fread(file_size, 4, 1, MEM);
               fread(virtual_dir, 4, 1, MEM);
 
-              uint8_t vpn_test = (uint8_t)(virtual_dir[0]>>23);
+              //uint8_t vpn_test = (uint8_t)(virtual_dir[0]>>23);
               if (bswap_32(virtual_dir[0]) > virtual_dir_mayor)
               {
                 file_size_mayor = bswap_32(file_size[0]);
@@ -403,38 +403,40 @@ uint32_t next_frame(CrmsFile* file_desc, uint8_t vpn, FILE* MEM){
 }
 
 int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
-  printf("\nentre a cr_read\n");
-  printf("vpn: %x\n", file_desc->VPN);
-  printf("dir_TP: %x\n", file_desc->dir_TP);
+  //printf("\nentre a cr_read\n");
+  //printf("vpn: %x\n", file_desc->VPN);
+  //printf("dir_TP: %x\n", file_desc->dir_TP);
   int read_now = 0;
   FILE* MEM = fopen(MEM_PATH, "r+b");
   uint8_t VPN_actual = (file_desc->virtual_dir + file_desc->index) >> 23;
   uint32_t offset_actual = (file_desc->virtual_dir + file_desc->index) & 0b00000000011111111111111111111111;
 
-  printf("offset %u\n",file_desc->offset);
-  printf("offset_actual %u\n", offset_actual);
-  printf("vpn actual: %u\n", VPN_actual);
+  //printf("offset %u\n",file_desc->offset);
+  //printf("offset_actual %u\n", offset_actual);
+  //printf("vpn actual: %u\n", VPN_actual);
   uint32_t position = file_desc->dir_TP + VPN_actual;
-  printf("dir_TP + VPN actual: %x\n", position);
+  //printf("dir_TP + VPN actual: %x\n", position);
 
-  printf("Nos pocisionmos al principio del archivo .....\n");
+  //printf("Nos pocisionmos al principio del archivo .....\n");
   fseek(MEM, 0, SEEK_SET); //nos posicionamos al principio del archivo (PCB)
-  printf("Nos movemos a la entreda correspondiente de tabla PCB.....\n");
+  //printf("Nos movemos a la entreda correspondiente de tabla PCB.....\n");
   fseek(MEM, position , SEEK_CUR);//nos movemos para llegar a la entrada correspondiente al archivo en la tabla PCB
   printf("pointing to: %lu", ftell(MEM));
 
   //ahora deberia estar en la entrada correcta
   uint8_t info_mem[1]; 
   fread(info_mem, 1, 1, MEM);//guardar el byte de informacion
-  printf("\ninfo pcb: %x\n",info_mem[0]);
-  printf("\nSacamos el bit de validez....\n");
+  //printf("\ninfo pcb: %x\n",info_mem[0]);
+  //printf("\nSacamos el bit de validez....\n");
   uint8_t validez = info_mem[0] >> 7;
   if (validez == 0){
+    fclose(MEM);
     return read_now;
+    
   }
   else{
-  printf("bit validez: %x\n", validez);
-  printf("\nObtenemos los 7 bit y agragamos offset...\n");
+  //printf("bit validez: %x\n", validez);
+  //printf("\nObtenemos los 7 bit y agragamos offset...\n");
 
   uint32_t PFN = ((info_mem[0] & 0b01111111)<<23) | offset_actual;
   printf("pfn: %x\n", info_mem[0] & 0b01111111);
@@ -459,12 +461,12 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
     }
     
     file_desc->index = file_desc->index + n_bytes;
-    
+    fclose(MEM);    
     return read_now;
   }
   
   else{//CASO 2: se me acaba el frame
-    printf("se me va a acabar el frame\n");
+    //printf("se me va a acabar el frame\n");
     while (bytes_to_read < n_bytes){//mientras los bytes que me quedan sean menor a los que debo leer
       for (int j = 0; j < bytes_to_read; j++)//itero segun los nbit
       {
@@ -476,10 +478,11 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
       //file_desc->index = file_desc->index + read_now;//index repocisionado
       uint32_t new_PFN = next_frame(file_desc, file_desc->VPN, MEM);
       if (new_PFN == 1073741825){
+        fclose(MEM);
         return n_bytes;
       }
       else{
-      printf("\nAhora vamos a al FRAME..\n");
+      //printf("\nAhora vamos a al FRAME..\n");
       fseek(MEM, 0, SEEK_SET); //nos posicionamos al principio del archivo (PCB)
       fseek(MEM, 4112, SEEK_CUR); //nos movemos   hasta los frame///
       fseek(MEM, new_PFN, SEEK_CUR); //llegamos al frame correspondiente
@@ -496,7 +499,7 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
         read_now ++;
       }
       file_desc->index = file_desc->index + n_bytes;
-
+      fclose(MEM);
       return read_now;
     }
   }

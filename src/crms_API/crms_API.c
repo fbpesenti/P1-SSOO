@@ -368,7 +368,6 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
       }
     }
   }
-  
   fclose(MEM);
   return cr_file;
 

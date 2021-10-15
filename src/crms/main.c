@@ -48,20 +48,16 @@ int main(int argc, char const *argv[])
         //char* process_name = "secret.txt";
         //cr_open(0, process_name,'r');
         printf("\nFuncion crs open\n");
-        uint8_t* buffer = calloc(16,1);
-        CrmsFile* crms2 = cr_open(0, "message.txt", 'r');
+        CrmsFile* crms2 = cr_open(9, "theme.wav", 'r');
+        uint8_t* buffer = calloc(crms2->file_size,1);
         if (crms2){
-            FILE* archivo = fopen("message.txt", "w+b");
-            int num = cr_read(crms2, buffer, 10);
+            FILE* archivo = fopen("theme.wav", "w+b");
+            int num = cr_read(crms2, buffer,crms2->file_size);
             printf("se leyeron %i bytes\n", num);
-            //for (int j = 0; j < 10; j++){
-              //  printf("byte: %x\n", buffer[j]);
-            //}
-            fwrite(buffer, 1, 10, archivo);
+            fwrite(buffer, 1, crms2->file_size, archivo);
             fclose(archivo);
             free(buffer);
             cr_close(crms2);
-            
         }
     }
     return 0;

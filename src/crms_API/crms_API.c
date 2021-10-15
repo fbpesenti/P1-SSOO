@@ -374,7 +374,6 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
 
 }
 
-
 uint32_t next_frame(CrmsFile* file_desc, uint8_t vpn, FILE* MEM){
 
   uint8_t VPN_actual = (file_desc->virtual_dir + file_desc->index) >> 23;  
@@ -396,7 +395,7 @@ uint32_t next_frame(CrmsFile* file_desc, uint8_t vpn, FILE* MEM){
   else{
     printf("bit validez: %x\n", validez);
     printf("Obtenemos los 7 bit y agragamos offset...\n");
-    uint32_t PFN = (info_mem[0] & 0111111)| offset_actual;
+    uint32_t PFN = ((info_mem[0] & 0b01111111)<<23) | offset_actual;
     printf("New PFN: %x\n", PFN);
     return PFN;
   }
@@ -422,6 +421,7 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
   fseek(MEM, 0, SEEK_SET); //nos posicionamos al principio del archivo (PCB)
   //printf("Nos movemos a la entreda correspondiente de tabla PCB.....\n");
   fseek(MEM, position , SEEK_CUR);//nos movemos para llegar a la entrada correspondiente al archivo en la tabla PCB
+  printf("pointing to: %lu", ftell(MEM));
 
   //ahora deberia estar en la entrada correcta
   uint8_t info_mem[1]; 
@@ -438,9 +438,11 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
   //printf("bit validez: %x\n", validez);
   //printf("\nObtenemos los 7 bit y agragamos offset...\n");
 
-  uint32_t PFN = (info_mem[0] & 0111111) | offset_actual;
-  //printf("PFN: %x\n", PFN);
-  //printf("\nAhora vamos al FRAME..\n");
+  uint32_t PFN = ((info_mem[0] & 0b01111111)<<23) | offset_actual;
+  printf("pfn: %x\n", info_mem[0] & 0b01111111);
+  printf("dir_real: %u\n", PFN);
+  printf("offset actual: %u", offset_actual);
+  printf("\nAhora vamos al FRAME..\n");
   fseek(MEM, 0, SEEK_SET); //nos posicionamos al principio del archivo (PCB)
   fseek(MEM, 4112, SEEK_CUR);//nos movemos   hasta los frame///
   fseek(MEM, PFN, SEEK_CUR);//llegamos al frame correspondiente
@@ -452,7 +454,8 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
     
     for (int j = 0; j < n_bytes; j++)//itero segun los nbit
     {
-      fread(buffer, 1, 1, MEM);
+      fread((buffer+j), 1, 1, MEM);
+      // printf("estoy escribiendo: %i\n", buffer[j]);
       read_now ++;
       bytes_to_read --;
     }
@@ -467,7 +470,7 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
     while (bytes_to_read < n_bytes){//mientras los bytes que me quedan sean menor a los que debo leer
       for (int j = 0; j < bytes_to_read; j++)//itero segun los nbit
       {
-        fread(buffer, 1, 1, MEM);
+        fread((buffer+j), 1, 1, MEM);
         read_now ++;
         n_bytes --;
       }
@@ -492,7 +495,7 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
     if (bytes_to_read > n_bytes){
       for (int j = 0; j < n_bytes; j++)//itero segun los nbit
       {
-        fread(buffer, 1, 1, MEM);
+        fread((buffer+j), 1, 1, MEM);
         read_now ++;
       }
       file_desc->index = file_desc->index + n_bytes;
@@ -530,7 +533,6 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
    return 7;
 }
 }
-
 
 void cr_delete_file(CrmsFile* file_desc){
   FILE* MEM = fopen(MEM_PATH, "r+b");
@@ -599,7 +601,7 @@ void cr_delete_file(CrmsFile* file_desc){
           if (validation_byte[0] == 1)
           {
             fread(nombre, 1, 12, MEM);
-            printf("nombre archivo: %s\n", nombre);
+           // printf("nombre archivo: %s\n", nombre);
             if (strcmp(nombre, file_desc->name) == 0)
             {
               validation_byte[0] = 0;

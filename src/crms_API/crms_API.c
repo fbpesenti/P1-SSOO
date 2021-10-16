@@ -5,6 +5,29 @@
 
 char* MEM_PATH;
 
+void cr_strerror(enum cr_error error){
+  switch (error)
+  {
+  case invalid_id:
+    printf("ERROR : Invalid input. Id de proceso inválido\n");
+    break;
+  case invalid_ls_processes:
+    printf("ERROR : No hay procesos activos \n");
+    break;
+  case invalid_inputs:
+    printf("ERROR : Inputs inválidos \n");
+    break;
+  case invalid_action:
+    printf("ERROR : No se pudo realizar acción \n");
+    break;
+  case invalid_mode:
+    printf("ERROR : Invalid input. modo para abrir archivo inválido (solo 'r' o 'w') \n");
+    break;
+  default:
+    break;
+  }
+};
+
 // funciones generales
 char* MEM_PATH;
 void cr_mount(char* memory_path) {
@@ -15,6 +38,7 @@ void cr_mount(char* memory_path) {
 void cr_ls_processes() {
     FILE* MEM = fopen(MEM_PATH, "r+b");
     fseek(MEM, 0, SEEK_SET);
+    int count = 0;
     //uint8_t entry_pcb;
     for (uint8_t i=0; i < 16; i+=1){
         //entry_pcb=i*256;
@@ -37,12 +61,19 @@ void cr_ls_processes() {
             //    printf("Proceso con id %d y nombre %s esta en ejecución\n", id_proceso[0], nombre);
             //}
             printf("Proceso con id %d y nombre %s esta en ejecución\n", id_proceso[0], nombre);
+            count++;
         }
         fseek(MEM, 242, SEEK_CUR);
     }
 
+    if (count == 0)
+        {
+          cr_strerror(invalid_ls_processes);
+        }
+
     fclose(MEM);
 }
+
 int cr_exists(int process_id, char* file_name){
     FILE* MEM = fopen(MEM_PATH, "r+b");
     fseek(MEM, 0, SEEK_SET);
@@ -63,7 +94,7 @@ int cr_exists(int process_id, char* file_name){
             fread(nombre_archivo,1,12,MEM);
             fread(tamano_archivo,1,4,MEM);
             fread(direccion_virtual,1,4,MEM);
-            if (strcmp(nombre_archivo,file_name)==0){
+            if (strcmp(nombre_archivo,file_name)==0 && validez[0] == 1){
                 printf("El archivo %s existe\n", nombre_archivo);
                 retornar+=1;
             }
@@ -72,10 +103,12 @@ int cr_exists(int process_id, char* file_name){
     }
     if (retornar==0){
         printf("Función cr_exists retorno 0\n");
+        fclose(MEM);
         return 0;
     }
     else{
         printf("Función cr_exists retorno 1\n");
+        fclose(MEM);
         return 1;
     }
 
@@ -87,6 +120,7 @@ void cr_ls_files(int process_id){
     FILE* MEM = fopen(MEM_PATH, "r+b");
     fseek(MEM, 0, SEEK_SET);
     //uint8_t entry_pcb;
+    int id_encontrado = 0;
     for (uint8_t i=0; i < 16; i+=1){
         //entry_pcb=i*256;
         uint8_t estado[1];
@@ -100,6 +134,7 @@ void cr_ls_files(int process_id){
         //printf("Puntero file: %ld\n",ftell(MEM));
         if (id_proceso[0] == process_id && estado[0]==1){
             printf("Mostrando los archivos del proceso con id %d y nombre %s\n", id_proceso[0], nombre);
+            id_encontrado++;
         }
         for (uint8_t i=0; i<10; i+=1){
             uint8_t validez[1];
@@ -120,6 +155,11 @@ void cr_ls_files(int process_id){
         }
         //256 - 14 - 210 = 32 para moverse la cantidad de bytes para estar en el siguiente proceso
         fseek(MEM, 32, SEEK_CUR);
+    }
+
+    if (id_encontrado == 0)
+    {
+      cr_strerror(invalid_id);
     }
 
     fclose(MEM);
@@ -154,6 +194,11 @@ void cr_start_process(int process_id, char* process_name){
         }
         fseek(MEM, 242, SEEK_CUR);
     }
+    if (entro == 0)
+    {
+      cr_strerror(invalid_action);
+    }
+
 
     fclose(MEM);
 }
@@ -161,6 +206,7 @@ void cr_start_process(int process_id, char* process_name){
 void cr_finish_process(int process_id){
     FILE* MEM = fopen(MEM_PATH, "r+b");
     fseek(MEM, 0, SEEK_SET);
+    int id_encontrado = 0;
     for (uint8_t i=0; i < 16; i+=1){
         //printf("Puntero file: %ld\n",ftell(MEM));
         uint8_t estado[1];
@@ -174,6 +220,7 @@ void cr_finish_process(int process_id){
         if (id_proceso[0]==process_id && estado[0]==1){
             printf("Proceso con id %d y nombre %s terminando\n", id_proceso[0], nombre);
             entro+=1;
+            id_encontrado++;
             fseek(MEM, -14, SEEK_CUR);
             estado[0]=0;
             id_proceso[0]=0;
@@ -209,6 +256,11 @@ void cr_finish_process(int process_id){
             fseek(MEM,242,SEEK_CUR);
         }
     }
+    if (id_encontrado == 0)
+    {
+      cr_strerror(invalid_id);
+      cr_strerror(invalid_action);
+    }
 
     fclose(MEM);
 }
@@ -221,9 +273,11 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
   cr_file->mode = mode; // guardo modo
   FILE* MEM = fopen(MEM_PATH, "r+b"); // abro memoria
   fseek(MEM, 0, SEEK_SET); //apunto al inicio de stream
+  int id_encontrado = 0;
+  int modo_correcto = 0;
   if (mode == 'r') // si es modo lectura
   {
-
+    modo_correcto++;
 
     for (uint8_t i = 0; i < 16; i++) // itero sobre PCB
     {
@@ -233,6 +287,7 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
 
       if (valypros[1] == process_id && valypros[0] == 1){
         // printf("proceso: %u\n", (unsigned)valypros[1]);
+        id_encontrado++;
         fseek(MEM, 12, SEEK_CUR);
         for (uint8_t j = 0; j < 10; j++){ // itero sobre 10 subentradas de archivos.
           char nombre[12];
@@ -273,6 +328,7 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
         } if (cr_file->validation_byte != 1)
         {
           printf("no existe archivo: %s en proceso %d\n", file_name, process_id);
+          cr_strerror(invalid_action);
           fclose(MEM);
           free(cr_file);
           return NULL;
@@ -283,10 +339,16 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
       }
       
     }
+    if (id_encontrado == 0)
+    {
+      cr_strerror(invalid_id);
+      cr_strerror(invalid_action);
+    }
   }
 
   if (mode == 'w')
   {
+    modo_correcto++;
     if(cr_exists(process_id, file_name)){
       fclose(MEM);
       free(cr_file);
@@ -300,6 +362,7 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
 
         if (valypros[1] == process_id && valypros[0] == 1){
           // printf("proceso: %u\n", (unsigned)valypros[1]);
+          id_encontrado++;
           fseek(MEM, 12, SEEK_CUR);
           uint32_t virtual_dir[1];
           uint32_t virtual_dir_mayor = 0;
@@ -366,7 +429,18 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
         
       }
     }
+    if (id_encontrado == 0)
+    {
+      cr_strerror(invalid_id);
+      cr_strerror(invalid_action);
+    }
   }
+  if (modo_correcto == 0)
+    {
+      cr_strerror(invalid_mode);
+      cr_strerror(invalid_action);
+    }
+
   fclose(MEM);
   return cr_file;
 
@@ -394,7 +468,8 @@ uint32_t next_frame(CrmsFile* file_desc, uint8_t vpn, FILE* MEM){
     printf("bit validez: %x\n", validez);
     printf("Obtenemos los 7 bit y agragamos offset...\n");
     uint32_t PFN = ((info_mem[0] & 0b01111111)<<23) | offset_actual;
-    printf("New PFN: %x\n", PFN);
+    // printf("pfn: %x\n", info_mem[0] & 0b01111111);
+    // printf("New PFN: %x\n", PFN);
     return PFN;
   }
   
@@ -470,11 +545,15 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
       {
         fread((buffer+j), 1, 1, MEM);
         read_now ++;
-        n_bytes --;
+        n_bytes  = n_bytes -1;
+        
       }
-      file_desc->index = file_desc->index + read_now; //reinicio el index porque leere desde cero un frame
+      
+      uint32_t new = file_desc->index + read_now;
+      file_desc->index = new; 
       //file_desc->index = file_desc->index + read_now;//index repocisionado
       uint32_t new_PFN = next_frame(file_desc, file_desc->VPN, MEM);
+
       if (new_PFN == 1073741825){
         fclose(MEM);
         return n_bytes;
@@ -485,15 +564,18 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
       fseek(MEM, 4112, SEEK_CUR); //nos movemos   hasta los frame///
       fseek(MEM, new_PFN, SEEK_CUR); //llegamos al frame correspondiente
       //fseek(MEM, file_desc->index, SEEK_CUR); //nos movemos segun el index
+      //printf("offset actual2: %u\n", offset_actual);
       uint32_t offset_actual = (file_desc->virtual_dir + file_desc->index) & 0b00000000011111111111111111111111;
+      //printf("offset actual3: %u\n", offset_actual);
       bytes_to_read = 8388608 - offset_actual;
+      
       }
     }
-
+    int index_read_now = read_now;
     if (bytes_to_read > n_bytes){
       for (int j = 0; j < n_bytes; j++)//itero segun los nbit
       {
-        fread((buffer+j), 1, 1, MEM);
+        fread((buffer+j+index_read_now), 1, 1, MEM);
         read_now ++;
       }
       file_desc->index = file_desc->index + n_bytes;
@@ -501,33 +583,6 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
       return read_now;
     }
   }
-  
-
-
-  
-
-
-
-
-
-
-
-    //uint32_t offset = dir_vir[0] & 0b00000000011111111111111111111111;
-    //printf("validez %hhx\n");
-    //if (validez[1] = "00000001")//si es valido
-    //{
-        //char* PFN[7];
-        //PFN[0] = (validez[1]>>1) AND 0x01;
-        //PFN[1] = (validez[1]>>2) AND 0x01;
-        //PFN[2] = (validez[1]>>3) AND 0x01;
-        //PFN[3] = (validez[1]>>4) AND 0x01;
-        //PFN[4] = (validez[1]>>5) AND 0x01;
-        ///PFN[5] = (validez[1]>>6) AND 0x01;
-        //PFN[6] = (validez[1]>>7) AND 0x01;
-        //int physical_adress = (PFN << 23) | file_desc->offset;
-    //aca deberia ir a buscar lo que hay que leer :)
-
-   // }
    return 7;
 }
 }

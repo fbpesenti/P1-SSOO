@@ -7,6 +7,17 @@
 #include <math.h>
 #include "crmsFile.h"
 
+
+enum cr_error{
+  invalid_id,
+  invalid_ls_processes,
+  invalid_inputs,
+  invalid_action,
+  invalid_mode,
+};
+
+void cr_strerror(enum cr_error error);
+
 // funciones generales
 void cr_mount(char* memory_path);
 
@@ -26,7 +37,7 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode);
 
 int cr_write_file(CrmsFile* file_desc, uint8_t* buffer, int n_bytes);
 
-int cr_read(CrmsFile* file_desc,  uint8_t* buffer, int n_bytes);
+int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes);
 
 void cr_delete_file(CrmsFile* file_desc);
 

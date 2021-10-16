@@ -14,14 +14,14 @@ void cr_strerror(enum cr_error error){
   case invalid_ls_processes:
     printf("ERROR : No hay procesos activos \n");
     break;
-  case invalid_inputs:
-    printf("ERROR : Inputs inválidos \n");
+  case invalid_file:
+    printf("ERROR : Archivo inválido \n");
     break;
   case invalid_action:
     printf("ERROR : No se pudo realizar acción \n");
     break;
   case invalid_mode:
-    printf("ERROR : Invalid input. modo para abrir archivo inválido (solo 'r' o 'w') \n");
+    printf("ERROR : modo para abrir archivo inválido (solo 'r' o 'w') \n");
     break;
   default:
     break;
@@ -744,12 +744,12 @@ int cr_write_file(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
      uint8_t byte_write = 0;
     if (file_desc->mode !='w')
     {
-      printf("El archivo no se puede escribir\n");
+      cr_strerror(invalid_mode);
       return 0;
     }
     printf("Buscando donde escribir");
     if(cr_exists(file_desc->process_id, file_desc->name)==0){
-      printf("El archivo ya no existe\n");
+      cr_strerror(invalid_file);
       return 0;
     }
     return byte_write;

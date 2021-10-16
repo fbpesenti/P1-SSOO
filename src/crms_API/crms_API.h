@@ -11,7 +11,7 @@
 enum cr_error{
   invalid_id,
   invalid_ls_processes,
-  invalid_inputs,
+  invalid_file,
   invalid_action,
   invalid_mode,
 };

@@ -11,14 +11,23 @@ int main(int argc, char const *argv[])
         printf("Funcion cr_mount\n");
         cr_mount(path);
         printf("argv: %s \n", argv[1]);
-        CrmsFile* crms = cr_open(0, "secret2.txt", 'r');
+        CrmsFile* crms = cr_open(0, "secret77.txt", 'w');
         if (crms)
         {
             // printf("\ncrms vpn: %d\n", crms->VPN);
             //crmsFile_print(crms);
             uint8_t* buffer = calloc(16, 1);
+            buffer[0]='1';
+            buffer[1]='1';
+            buffer[2]='1';
+            buffer[3]='1';
+            buffer[4]='1';
+            buffer[5]='1';
+            buffer[6]='1';
+            buffer[7]='1';
+            buffer[8]='1';
+            buffer[9]='1';
             cr_write_file(crms, buffer, 10);
-            cr_delete_file(crms);
             cr_close(crms);
         }
     
@@ -59,10 +68,10 @@ int main(int argc, char const *argv[])
         //cr_open(0, process_name,'r');
         printf("\nFuncion crs open\n");
 
-        CrmsFile* crms2 = cr_open(9, "theme.wav", 'r');
+        CrmsFile* crms2 = cr_open(0, "secret77.txt", 'r');
         if (crms2){
             uint8_t* buffer = calloc(crms2->file_size, 1);
-            FILE* archivo = fopen("theme.wav", "w+b");
+            FILE* archivo = fopen("secret77.txt", "w+b");
             int num = cr_read(crms2, buffer, crms2->file_size);
             // printf("error?\n");
             // printf("se leyeron %i bytes\n", num);

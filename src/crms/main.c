@@ -14,7 +14,7 @@ int main(int argc, char const *argv[])
         CrmsFile* crms = cr_open(0, "secret77.txt", 'w');
         if (crms)
         {
-            printf("\ncrms vpn: %d\n", crms->VPN);
+            // printf("\ncrms vpn: %d\n", crms->VPN);
             //crmsFile_print(crms);
             uint8_t* buffer = calloc(16, 1);
             buffer[0]='1';
@@ -73,8 +73,8 @@ int main(int argc, char const *argv[])
             uint8_t* buffer = calloc(crms2->file_size, 1);
             FILE* archivo = fopen("secret77.txt", "w+b");
             int num = cr_read(crms2, buffer, crms2->file_size);
-            printf("error?\n");
-            printf("se leyeron %i bytes\n", num);
+            // printf("error?\n");
+            // printf("se leyeron %i bytes\n", num);
             fwrite(buffer, 1, crms2->file_size, archivo);
             fclose(archivo);
             cr_close(crms2);

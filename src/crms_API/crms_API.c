@@ -14,14 +14,14 @@ void cr_strerror(enum cr_error error){
   case invalid_ls_processes:
     printf("ERROR : No hay procesos activos \n");
     break;
-  case invalid_inputs:
-    printf("ERROR : Inputs inválidos \n");
+  case invalid_file:
+    printf("ERROR : Archivo inválido \n");
     break;
   case invalid_action:
     printf("ERROR : No se pudo realizar acción \n");
     break;
   case invalid_mode:
-    printf("ERROR : Invalid input. modo para abrir archivo inválido (solo 'r' o 'w') \n");
+    printf("ERROR : modo para abrir archivo inválido (solo 'r' o 'w') \n");
     break;
   default:
     break;
@@ -32,7 +32,7 @@ void cr_strerror(enum cr_error error){
 char* MEM_PATH;
 void cr_mount(char* memory_path) {
     MEM_PATH = memory_path;
-    printf("MEM_PATH: %s \n", MEM_PATH);
+    // printf("MEM_PATH: %s \n", MEM_PATH);
 }
 
 void cr_ls_processes() {
@@ -95,19 +95,19 @@ int cr_exists(int process_id, char* file_name){
             fread(tamano_archivo,1,4,MEM);
             fread(direccion_virtual,1,4,MEM);
             if (strcmp(nombre_archivo,file_name)==0 && validez[0] == 1){
-                printf("El archivo %s existe\n", nombre_archivo);
+                // printf("El archivo %s existe\n", nombre_archivo);
                 retornar+=1;
             }
         }
         fseek(MEM, 32, SEEK_CUR);
     }
     if (retornar==0){
-        printf("Función cr_exists retorno 0\n");
+        // printf("Función cr_exists retorno 0\n");
         fclose(MEM);
         return 0;
     }
     else{
-        printf("Función cr_exists retorno 1\n");
+        // printf("Función cr_exists retorno 1\n");
         fclose(MEM);
         return 1;
     }
@@ -301,13 +301,13 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
             {
               cr_file->validation_byte = validation_byte[0];
               cr_file->name = file_name;
-              printf("nombre: %s\n", nombre);
-              printf("file_name: %s\n", file_name);
+              // printf("nombre: %s\n", nombre);
+              // printf("file_name: %s\n", file_name);
               uint32_t file_size[1];
               uint32_t virtual_dir[1];
               fread(file_size, 4, 1, MEM);
               fread(virtual_dir, 4, 1, MEM);
-              printf("tamaño de archivo: %u\n", bswap_32(file_size[0]) );
+              // printf("tamaño de archivo: %u\n", bswap_32(file_size[0]) );
               uint8_t vpn = (uint8_t)(bswap_32(virtual_dir[0])>>23);
               uint32_t offset = bswap_32(virtual_dir[0]) & 0b00000000011111111111111111111111;
               cr_file->virtual_dir = bswap_32(virtual_dir[0]);
@@ -316,8 +316,8 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
               cr_file->file_size = bswap_32(file_size[0]);
               cr_file->dir_TP =  256*i + 14 + (21*10);
               // printf("dir_tp: %lu\n", dir_tp);
-              printf("vpn: %x\n", vpn);
-              printf("offset: %x\n", offset);
+              // printf("vpn: %x\n", vpn);
+              // printf("offset: %x\n", offset);
               break;
             } else {
               fseek(MEM,-12,SEEK_CUR);
@@ -401,14 +401,14 @@ CrmsFile* cr_open(int process_id, char* file_name, char mode){
           dir_vir[0] = file_size_mayor + virtual_dir_mayor;
           if ((uint8_t)(dir_vir[0] >> 23) > (uint8_t)32) //no abre si no existe pagina.
           {
-            printf("dir_vir a escribir: %u", (uint8_t)(dir_vir[0]) >> 23);
+            // printf("dir_vir a escribir: %u", (uint8_t)(dir_vir[0]) >> 23);
             fclose(MEM);
             free(cr_file);
             return NULL;
           }
           uint8_t vpn = dir_vir[0] >> 23;
           uint32_t offset = dir_vir[0] & 0b00000000011111111111111111111111;
-          printf("offset a guardar: %x", offset);
+          // printf("offset a guardar: %x", offset);
           cr_file->validation_byte = byte_validez[0];
           cr_file->VPN = vpn;
           cr_file->virtual_dir = dir_vir[0];
@@ -452,21 +452,21 @@ uint32_t next_frame(CrmsFile* file_desc, uint8_t vpn, FILE* MEM){
   uint32_t position = file_desc->dir_TP + VPN_actual;
   uint32_t offset_actual = (file_desc->virtual_dir + file_desc->index) & 0b00000000011111111111111111111111;
 
-  printf("dir_TP + VPN actual: %x\n", position);
+  // printf("dir_TP + VPN actual: %x\n", position);
   fseek(MEM, 0, SEEK_SET); 
   fseek(MEM, position , SEEK_CUR);
   uint8_t info_mem[1]; 
   fread(info_mem, 1, 1, MEM);
-  printf("info pcb: %x\n",info_mem[0]);
-  printf("Sacamos el bit de validez....\n");
+  // printf("info pcb: %x\n",info_mem[0]);
+  // printf("Sacamos el bit de validez....\n");
   uint8_t validez = info_mem[0] >> 7;
   if (validez == 0){
     uint32_t PFN = 1073741825;
     return PFN;    
   }
   else{
-    printf("bit validez: %x\n", validez);
-    printf("Obtenemos los 7 bit y agragamos offset...\n");
+    // printf("bit validez: %x\n", validez);
+    // printf("Obtenemos los 7 bit y agragamos offset...\n");
     uint32_t PFN = ((info_mem[0] & 0b01111111)<<23) | offset_actual;
     // printf("pfn: %x\n", info_mem[0] & 0b01111111);
     // printf("New PFN: %x\n", PFN);
@@ -494,7 +494,7 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
   fseek(MEM, 0, SEEK_SET); //nos posicionamos al principio del archivo (PCB)
   //printf("Nos movemos a la entreda correspondiente de tabla PCB.....\n");
   fseek(MEM, position , SEEK_CUR);//nos movemos para llegar a la entrada correspondiente al archivo en la tabla PCB
-  printf("pointing to: %lu", ftell(MEM));
+  // printf("pointing to: %lu", ftell(MEM));
 
   //ahora deberia estar en la entrada correcta
   uint8_t info_mem[1]; 
@@ -512,10 +512,10 @@ int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
   //printf("\nObtenemos los 7 bit y agragamos offset...\n");
 
   uint32_t PFN = ((info_mem[0] & 0b01111111)<<23) | offset_actual;
-  printf("pfn: %x\n", info_mem[0] & 0b01111111);
-  printf("dir_real: %u\n", PFN);
-  printf("offset actual: %u", offset_actual);
-  printf("\nAhora vamos al FRAME..\n");
+  // printf("pfn: %x\n", info_mem[0] & 0b01111111);
+  // printf("dir_real: %u\n", PFN);
+  // printf("offset actual: %u", offset_actual);
+  // printf("\nAhora vamos al FRAME..\n");
   fseek(MEM, 0, SEEK_SET); //nos posicionamos al principio del archivo (PCB)
   fseek(MEM, 4112, SEEK_CUR);//nos movemos   hasta los frame///
   fseek(MEM, PFN, SEEK_CUR);//llegamos al frame correspondiente
@@ -743,11 +743,11 @@ int cr_write_file(CrmsFile* file_desc, uint8_t* buffer, int n_bytes){
 
     if (file_desc->mode !='w')
     {
-      printf("El archivo no se puede escribir\n");
+      cr_strerror(invalid_mode);
       return 0;
     }
     if(cr_exists(file_desc->process_id, file_desc->name)==0){
-      printf("El archivo ya no existe\n");
+      cr_strerror(invalid_file);
       return 0;
     }
     uint8_t VPN_actual = (file_desc->virtual_dir + file_desc->index) >> 23;

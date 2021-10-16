@@ -15,7 +15,9 @@ int main(int argc, char const *argv[])
         if (crms)
         {
             printf("\ncrms vpn: %d\n", crms->VPN);
-            // crmsFile_print(crms);
+            //crmsFile_print(crms);
+            uint8_t* buffer = calloc(crms->file_size, 1);
+            cr_write_file(crms, buffer, 10);
             cr_delete_file(crms);
             cr_close(crms);
         }

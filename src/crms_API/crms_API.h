@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <byteswap.h>
-#include<math.h>
+#include <math.h>
 #include "crmsFile.h"
 
 
@@ -35,7 +35,7 @@ void cr_finish_process(int process_id);
 
 CrmsFile* cr_open(int process_id, char* file_name, char mode);
 
-int cr_write_file(CrmsFile* file_desc, void* buffer, int n_bytes);
+int cr_write_file(CrmsFile* file_desc, uint8_t* buffer, int n_bytes);
 
 int cr_read(CrmsFile* file_desc, uint8_t* buffer, int n_bytes);
 

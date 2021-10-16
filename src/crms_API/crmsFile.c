@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdbool.h>
 #include "crmsFile.h"
 
 void crmsFile_print(CrmsFile* crmsfile){

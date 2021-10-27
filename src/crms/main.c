@@ -10,76 +10,52 @@ int main(int argc, char const *argv[])
         char* path = argv[1];
         printf("Funcion cr_mount\n");
         cr_mount(path);
-        printf("argv: %s \n", argv[1]);
-        CrmsFile* crms = cr_open(0, "secret77.txt", 'w');
-        if (crms)
-        {
-            // printf("\ncrms vpn: %d\n", crms->VPN);
-            //crmsFile_print(crms);
-            uint8_t* buffer = calloc(16, 1);
-            buffer[0]='1';
-            buffer[1]='1';
-            buffer[2]='1';
-            buffer[3]='1';
-            buffer[4]='1';
-            buffer[5]='1';
-            buffer[6]='1';
-            buffer[7]='1';
-            buffer[8]='1';
-            buffer[9]='1';
-            cr_write_file(crms, buffer, 10);
-            cr_close(crms);
-        }
+        printf("Path cr_mount: %s\n", path);
     
         printf("\nFuncion cr_ls_processes\n");
         cr_ls_processes();
-        int process_id_files = 0;
 
-        printf("\nFuncion cr_ls_files\n");
+
+        int process_id_files = 400;
+        printf("\nFuncion cr_ls_files invalid\n");
+        cr_ls_files(process_id_files);
+
+        process_id_files = 0;
+        printf("\nFuncion cr_ls_files valid\n");
         cr_ls_files(process_id_files);
 
         printf("\nFuncion cr_exists\n");
         int process_id_exists = 0;
         char* file_name_exists = "secret.txt";
-        cr_exists(process_id_exists, file_name_exists);
+        char* file_name_exists_not = "no.mp4";
+        int exists = cr_exists(process_id_exists, file_name_exists);
+        int exists_not = cr_exists(process_id_exists, file_name_exists_not);
+        printf("retorno: %i\n", exists);
+        printf("retorno de inexitente: %i\n", exists_not);
+        
 
-        printf("\nFuncion cr_start_process\n");
-        int process_id_start = 202;
-        char* process_name_start = "new_process";
-        cr_start_process(process_id_start, process_name_start);
+        // printf("\nFuncion cr_start_process\n");
+        // int process_id_start = 202;
+        // char* process_name_start = "new_process";
+        // cr_start_process(process_id_start, process_name_start);
+        // // int process_id_start_invalid = 100;
+        // // char* process_name_start_invalid = "new_process";
+        // // cr_start_process(process_id_start_invalid, process_name_start_invalid);
+        // for (size_t i = 0; i < 17; i++)
+        // {
+        //     /* code */
+        // }
+        
 
-        printf("\nFuncion cr_ls_processes\n");
-        cr_ls_processes();
+        // printf("\nFuncion cr_ls_processes\n");
+        // cr_ls_processes();
 
-        printf("\nFuncion process_id_finish\n");
-        int process_id_finish = 202;
-        cr_finish_process(process_id_finish);
+        // printf("\nFuncion process_id_finish\n");
+        // int process_id_finish = 202;
+        // cr_finish_process(process_id_finish);
 
-        printf("\nFuncion cr_ls_processes\n");
-        cr_ls_processes();
-        printf("\nFuncion crs open\n");
-
-        int process_id_cats = 200;
-
-        printf("\nFuncion cr_ls_files\n");
-        cr_ls_files(process_id_cats);
-
-        //char* process_name = "secret.txt";
-        //cr_open(0, process_name,'r');
-        printf("\nFuncion crs open\n");
-
-        CrmsFile* crms2 = cr_open(0, "secret77.txt", 'r');
-        if (crms2){
-            uint8_t* buffer = calloc(crms2->file_size, 1);
-            FILE* archivo = fopen("secret77.txt", "w+b");
-            int num = cr_read(crms2, buffer, crms2->file_size);
-            // printf("error?\n");
-            // printf("se leyeron %i bytes\n", num);
-            fwrite(buffer, 1, crms2->file_size, archivo);
-            fclose(archivo);
-            cr_close(crms2);
-            free(buffer);
-        }
+        // printf("\nFuncion cr_ls_processes\n");
+        // cr_ls_processes();
     }
     return 0;
 }
